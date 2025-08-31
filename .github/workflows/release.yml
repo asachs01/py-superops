@@ -1,0 +1,341 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., 1.0.0)'
+        required: true
+        type: string
+      prerelease:
+        description: 'Is this a pre-release?'
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false  # Don't cancel releases
+
+env:
+  FORCE_COLOR: "1"
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+  PIP_NO_PYTHON_VERSION_WARNING: "1"
+
+permissions:
+  contents: write
+  id-token: write  # For trusted publishing to PyPI
+
+jobs:
+  # Validate release readiness
+  validate-release:
+    name: Validate Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      changelog: ${{ steps.changelog.outputs.changelog }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .[dev]
+
+      - name: Determine version
+        id: version
+        run: |
+          if [[ "${{ github.event_name }}" == "release" ]]; then
+            VERSION="${{ github.event.release.tag_name }}"
+            VERSION=${VERSION#v}  # Remove 'v' prefix if present
+          else
+            VERSION="${{ github.event.inputs.version }}"
+          fi
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "Release version: ${VERSION}"
+
+      - name: Validate version format
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          if ! [[ "${VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+([a-zA-Z0-9\.\-]+)?$ ]]; then
+            echo "Invalid version format: ${VERSION}"
+            echo "Expected format: MAJOR.MINOR.PATCH[PRERELEASE]"
+            exit 1
+          fi
+
+      - name: Check if version exists in changelog
+        id: changelog
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          if grep -q "## \[${VERSION}\]" CHANGELOG.md; then
+            echo "Version ${VERSION} found in CHANGELOG.md"
+            # Extract changelog entry
+            CHANGELOG_ENTRY=$(sed -n "/## \[${VERSION}\]/,/## \[/p" CHANGELOG.md | head -n -1 | tail -n +2)
+            echo "changelog<<EOF" >> $GITHUB_OUTPUT
+            echo "$CHANGELOG_ENTRY" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          else
+            echo "Version ${VERSION} not found in CHANGELOG.md"
+            exit 1
+          fi
+
+      - name: Validate no uncommitted changes
+        run: |
+          if [[ -n "$(git status --porcelain)" ]]; then
+            echo "There are uncommitted changes in the repository"
+            git status
+            exit 1
+          fi
+
+      - name: Run full test suite
+        run: |
+          pytest tests/ \
+            --verbose \
+            --cov=py_superops \
+            --cov-fail-under=90 \
+            -m "not slow and not integration"
+
+  # Build release artifacts
+  build-release:
+    name: Build Release Artifacts
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: validate-release
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install build tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install build twine wheel
+
+      - name: Update version in source
+        run: |
+          VERSION="${{ needs.validate-release.outputs.version }}"
+          # Update version in __init__.py
+          sed -i "s/__version__ = .*/__version__ = \"${VERSION}\"/" src/py_superops/__init__.py
+
+          # Verify version was updated correctly
+          python -c "
+          import sys
+          sys.path.insert(0, 'src')
+          import py_superops
+          assert py_superops.__version__ == '${VERSION}', f'Version mismatch: {py_superops.__version__} != ${VERSION}'
+          print(f'Version verified: {py_superops.__version__}')
+          "
+
+      - name: Build source distribution and wheel
+        run: |
+          python -m build --sdist --wheel --outdir dist/
+
+      - name: Verify build artifacts
+        run: |
+          twine check dist/*
+
+          # Test installation from wheel
+          pip install dist/*.whl
+          python -c "
+          import py_superops
+          print(f'Installed version: {py_superops.__version__}')
+          assert py_superops.__version__ == '${{ needs.validate-release.outputs.version }}'
+          "
+
+      - name: Generate checksums
+        run: |
+          cd dist
+          sha256sum * > SHA256SUMS
+          cat SHA256SUMS
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-artifacts
+          path: |
+            dist/
+            CHANGELOG.md
+
+  # Create GitHub release
+  github-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [validate-release, build-release]
+    if: github.event_name == 'workflow_dispatch'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download release artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-artifacts
+          path: ./
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: "v${{ needs.validate-release.outputs.version }}"
+          name: "Release v${{ needs.validate-release.outputs.version }}"
+          body: |
+            ## What's Changed
+
+            ${{ needs.validate-release.outputs.changelog }}
+
+            ## Installation
+
+            ```bash
+            pip install py-superops==${{ needs.validate-release.outputs.version }}
+            ```
+
+            ## Verification
+
+            All release artifacts include SHA256 checksums for verification.
+
+            **Full Changelog**: https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md
+          files: |
+            dist/*
+          prerelease: ${{ github.event.inputs.prerelease || false }}
+          generate_release_notes: true
+          make_latest: ${{ !github.event.inputs.prerelease }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Publish to PyPI
+  pypi-publish:
+    name: Publish to PyPI
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [validate-release, build-release]
+    environment:
+      name: pypi
+      url: https://pypi.org/p/py-superops
+
+    steps:
+      - name: Download release artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-artifacts
+          path: ./
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          attestations: true
+          print-hash: true
+
+  # Publish to TestPyPI (for pre-releases)
+  testpypi-publish:
+    name: Publish to TestPyPI
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [validate-release, build-release]
+    if: github.event.inputs.prerelease == 'true'
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/p/py-superops
+
+    steps:
+      - name: Download release artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-artifacts
+          path: ./
+
+      - name: Publish to TestPyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          attestations: true
+          print-hash: true
+
+  # Post-release tasks
+  post-release:
+    name: Post-Release Tasks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [validate-release, build-release, pypi-publish]
+    if: always() && needs.pypi-publish.result == 'success'
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Configure git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Create development version
+        run: |
+          VERSION="${{ needs.validate-release.outputs.version }}"
+          # Increment patch version for development
+          IFS='.' read -ra VERSION_PARTS <<< "$VERSION"
+          MAJOR=${VERSION_PARTS[0]}
+          MINOR=${VERSION_PARTS[1]}
+          PATCH=$((VERSION_PARTS[2] + 1))
+          DEV_VERSION="${MAJOR}.${MINOR}.${PATCH}.dev0"
+
+          # Update version in source
+          sed -i "s/__version__ = .*/__version__ = \"${DEV_VERSION}\"/" src/py_superops/__init__.py
+
+          echo "Updated to development version: ${DEV_VERSION}"
+
+      - name: Add unreleased section to changelog
+        run: |
+          # Add new unreleased section to CHANGELOG.md
+          sed -i '/^## \[Unreleased\]/a\\n## [Unreleased]\n\n### Added\n\n### Changed\n\n### Deprecated\n\n### Removed\n\n### Fixed\n\n### Security\n' CHANGELOG.md || true
+
+      - name: Commit version bump
+        run: |
+          git add src/py_superops/__init__.py CHANGELOG.md
+          git commit -m "chore: bump to development version after release v${{ needs.validate-release.outputs.version }}"
+          git push origin main
+
+  # Notification
+  notify:
+    name: Release Notification
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [validate-release, build-release, pypi-publish, github-release]
+    if: always()
+
+    steps:
+      - name: Notify success
+        if: needs.pypi-publish.result == 'success'
+        run: |
+          echo "🎉 Release v${{ needs.validate-release.outputs.version }} published successfully!"
+          echo "📦 Available on PyPI: https://pypi.org/project/py-superops/${{ needs.validate-release.outputs.version }}/"
+
+      - name: Notify failure
+        if: failure()
+        run: |
+          echo "❌ Release v${{ needs.validate-release.outputs.version }} failed!"
+          echo "Check the workflow logs for details."

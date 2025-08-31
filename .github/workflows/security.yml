@@ -1,0 +1,262 @@
+name: Security
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    # Run security scans daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+  security-events: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FORCE_COLOR: "1"
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+  PIP_NO_PYTHON_VERSION_WARNING: "1"
+
+jobs:
+  # CodeQL Analysis
+  codeql:
+    name: CodeQL Analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [python]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          queries: security-extended,security-and-quality
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .[dev]
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{matrix.language}}"
+
+  # Dependency Review
+  dependency-review:
+    name: Dependency Review
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: moderate
+          allow-ghsas: GHSA-example-1234-abcd  # Example allowlist
+          deny-licenses: GPL-2.0, GPL-3.0
+
+  # Advanced Security Scanning
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install security tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install bandit[toml] safety semgrep pip-audit
+
+      - name: Run Bandit security analysis
+        run: |
+          bandit -c pyproject.toml -r src/ -f sarif -o bandit-results.sarif
+          bandit -c pyproject.toml -r src/ -f json -o bandit-results.json
+        continue-on-error: true
+
+      - name: Upload Bandit SARIF results
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: bandit-results.sarif
+
+      - name: Run Safety dependency check
+        run: |
+          safety check --json --output safety-results.json
+          safety check --short-report
+        continue-on-error: true
+
+      - name: Run pip-audit for vulnerabilities
+        run: |
+          pip-audit --desc --format=json --output=pip-audit-results.json
+          pip-audit --desc
+        continue-on-error: true
+
+      - name: Run Semgrep static analysis
+        run: |
+          semgrep --config=auto --json --output=semgrep-results.json src/
+          semgrep --config=auto --error src/
+        continue-on-error: true
+
+      - name: Upload security scan artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-scan-results
+          path: |
+            bandit-results.json
+            safety-results.json
+            pip-audit-results.json
+            semgrep-results.json
+
+  # License Compliance Check
+  license-check:
+    name: License Compliance
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install license checker
+        run: |
+          python -m pip install --upgrade pip
+          pip install pip-licenses licensecheck
+
+      - name: Check licenses
+        run: |
+          pip install -e .
+          pip-licenses --format=json --output-file=licenses.json
+          pip-licenses --format=markdown --output-file=licenses.md
+          licensecheck --zero
+
+      - name: Upload license information
+        uses: actions/upload-artifact@v4
+        with:
+          name: license-information
+          path: |
+            licenses.json
+            licenses.md
+
+  # SBOM Generation
+  sbom:
+    name: Generate SBOM
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install SBOM tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install cyclone-dx-bom pip-audit
+
+      - name: Generate SBOM
+        run: |
+          pip install -e .
+          cyclone-dx py --format json --output-file sbom.json
+          cyclone-x py --format xml --output-file sbom.xml
+
+      - name: Upload SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: |
+            sbom.json
+            sbom.xml
+
+  # Security Summary
+  security-summary:
+    name: Security Summary
+    runs-on: ubuntu-latest
+    needs: [codeql, security-scan, license-check, sbom]
+    if: always()
+    timeout-minutes: 5
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+
+      - name: Security summary
+        run: |
+          echo "## Security Scan Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [[ "${{ needs.codeql.result }}" == "success" ]]; then
+            echo "✅ **CodeQL Analysis**: Passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **CodeQL Analysis**: Failed or Issues Found" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [[ "${{ needs.security-scan.result }}" == "success" ]]; then
+            echo "✅ **Security Scan**: Passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ **Security Scan**: Issues Found (check artifacts)" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [[ "${{ needs.license-check.result }}" == "success" ]]; then
+            echo "✅ **License Check**: Compliant" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **License Check**: Issues Found" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [[ "${{ needs.sbom.result }}" == "success" ]]; then
+            echo "✅ **SBOM Generation**: Completed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **SBOM Generation**: Failed" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📄 Security artifacts are available for download in the workflow summary." >> $GITHUB_STEP_SUMMARY
