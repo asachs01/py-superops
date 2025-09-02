@@ -46,12 +46,14 @@ Available Managers:
     - SiteManager: Site/location management
     - ContactManager: Contact organization and management
     - KnowledgeBaseManager: Knowledge base articles and collections
+    - ContractsManager: Contract lifecycle and management operations
 """
 
 from .assets import AssetManager
 from .base import ResourceManager
 from .clients import ClientManager
 from .contacts import ContactManager
+from .contracts import ContractsManager
 from .knowledge_base import (
     KnowledgeBaseArticleManager,
     KnowledgeBaseCollectionManager,
@@ -69,6 +71,7 @@ __all__ = [
     "AssetManager",
     "SiteManager",
     "ContactManager",
+    "ContractsManager",
     "KnowledgeBaseManager",
     "KnowledgeBaseArticleManager",
     "KnowledgeBaseCollectionManager",
@@ -81,6 +84,7 @@ MANAGER_REGISTRY = {
     "assets": AssetManager,
     "sites": SiteManager,
     "contacts": ContactManager,
+    "contracts": ContractsManager,
     "knowledge_base": KnowledgeBaseManager,
 }
 

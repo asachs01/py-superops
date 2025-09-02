@@ -26,6 +26,7 @@ if TYPE_CHECKING:
         AssetManager,
         ClientManager,
         ContactManager,
+        ContractsManager,
         KnowledgeBaseManager,
         SiteManager,
         TicketManager,
@@ -46,7 +47,7 @@ class SuperOpsClient:
 
         # Create configuration
         config = SuperOpsConfig(
-            api_key="your-api-key",
+            api_key="your-api-key",  # pragma: allowlist secret
             base_url="https://api.superops.com/v1"
         )
 
@@ -83,6 +84,7 @@ class SuperOpsClient:
         self._assets_manager = None
         self._sites_manager = None
         self._contacts_manager = None
+        self._contracts_manager = None
         self._knowledge_base_manager = None
 
         # Setup logging
@@ -144,6 +146,15 @@ class SuperOpsClient:
 
             self._contacts_manager = ContactManager(self)
         return self._contacts_manager
+
+    @property
+    def contracts(self) -> "ContractsManager":
+        """Get the contracts manager for contract operations."""
+        if self._contracts_manager is None:
+            from .managers import ContractsManager
+
+            self._contracts_manager = ContractsManager(self)
+        return self._contracts_manager
 
     @property
     def knowledge_base(self) -> "KnowledgeBaseManager":

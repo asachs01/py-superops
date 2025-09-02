@@ -8,13 +8,15 @@ This module provides GraphQL fragments that can be reused across queries and mut
 to maintain consistency and reduce duplication.
 """
 
-from typing import Dict, Set
+from typing import Optional, Set
 
 
 class GraphQLFragment:
     """Represents a GraphQL fragment with dependencies."""
 
-    def __init__(self, name: str, on_type: str, fields: str, dependencies: Set[str] = None):
+    def __init__(
+        self, name: str, on_type: str, fields: str, dependencies: Optional[Set[str]] = None
+    ):
         """Initialize a GraphQL fragment.
 
         Args:
@@ -325,6 +327,97 @@ KB_ARTICLE_SUMMARY_FIELDS = GraphQLFragment(
     """,
 )
 
+# Contract fragments
+CONTRACT_CORE_FIELDS = GraphQLFragment(
+    name="ContractCoreFields",
+    on_type="Contract",
+    fields="""
+    ...BaseFields
+    clientId
+    name
+    contractNumber
+    contractType
+    status
+    startDate
+    endDate
+    billingCycle
+    contractValue
+    currency
+    """,
+    dependencies={"BaseFields"},
+)
+
+CONTRACT_FULL_FIELDS = GraphQLFragment(
+    name="ContractFullFields",
+    on_type="Contract",
+    fields="""
+    ...ContractCoreFields
+    renewalDate
+    autoRenew
+    description
+    termsAndConditions
+    renewalTerms
+    cancellationTerms
+    signedByClient
+    signedByProvider
+    signedDate
+    notificationDays
+    tags
+    customFields
+    """,
+    dependencies={"ContractCoreFields"},
+)
+
+CONTRACT_SUMMARY_FIELDS = GraphQLFragment(
+    name="ContractSummaryFields",
+    on_type="Contract",
+    fields="""
+    id
+    name
+    contractNumber
+    contractType
+    status
+    clientId
+    contractValue
+    currency
+    startDate
+    endDate
+    """,
+)
+
+CONTRACT_SLA_FIELDS = GraphQLFragment(
+    name="ContractSLAFields",
+    on_type="ContractSLA",
+    fields="""
+    ...BaseFields
+    contractId
+    level
+    responseTimeMinutes
+    resolutionTimeHours
+    availabilityPercentage
+    description
+    penalties
+    """,
+    dependencies={"BaseFields"},
+)
+
+CONTRACT_RATE_FIELDS = GraphQLFragment(
+    name="ContractRateFields",
+    on_type="ContractRate",
+    fields="""
+    ...BaseFields
+    contractId
+    serviceType
+    rateType
+    rateAmount
+    currency
+    description
+    effectiveDate
+    endDate
+    """,
+    dependencies={"BaseFields"},
+)
+
 
 # Fragment collections for easy access
 ALL_FRAGMENTS = {
@@ -351,6 +444,11 @@ ALL_FRAGMENTS = {
         KB_ARTICLE_CORE_FIELDS,
         KB_ARTICLE_FULL_FIELDS,
         KB_ARTICLE_SUMMARY_FIELDS,
+        CONTRACT_CORE_FIELDS,
+        CONTRACT_FULL_FIELDS,
+        CONTRACT_SUMMARY_FIELDS,
+        CONTRACT_SLA_FIELDS,
+        CONTRACT_RATE_FIELDS,
     ]
 }
 
@@ -389,6 +487,14 @@ KB_FRAGMENTS = {
     "article_core": KB_ARTICLE_CORE_FIELDS,
     "article_full": KB_ARTICLE_FULL_FIELDS,
     "article_summary": KB_ARTICLE_SUMMARY_FIELDS,
+}
+
+CONTRACT_FRAGMENTS = {
+    "core": CONTRACT_CORE_FIELDS,
+    "full": CONTRACT_FULL_FIELDS,
+    "summary": CONTRACT_SUMMARY_FIELDS,
+    "sla": CONTRACT_SLA_FIELDS,
+    "rate": CONTRACT_RATE_FIELDS,
 }
 
 
@@ -562,5 +668,35 @@ def get_kb_fields(collection_detail: str = "core", article_detail: str = "core")
 
     if article_detail in article_mapping:
         fragments.add(article_mapping[article_detail])
+
+    return fragments
+
+
+def get_contract_fields(
+    detail_level: str = "core", include_slas: bool = False, include_rates: bool = False
+) -> Set[str]:
+    """Get contract fragment names for specified detail level.
+
+    Args:
+        detail_level: Level of detail (summary, core, full)
+        include_slas: Whether to include SLA fields
+        include_rates: Whether to include rate fields
+
+    Returns:
+        Set of fragment names
+    """
+    mapping = {
+        "summary": {"ContractSummaryFields"},
+        "core": {"ContractCoreFields"},
+        "full": {"ContractFullFields"},
+    }
+
+    fragments = mapping.get(detail_level, {"ContractCoreFields"})
+
+    if include_slas:
+        fragments.add("ContractSLAFields")
+
+    if include_rates:
+        fragments.add("ContractRateFields")
 
     return fragments
