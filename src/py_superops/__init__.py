@@ -106,6 +106,7 @@ try:
         KnowledgeBaseManager,
         ResourceManager,
         SiteManager,
+        TasksManager,
         TicketManager,
     )
 

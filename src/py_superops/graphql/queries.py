@@ -14,6 +14,7 @@ from typing import Any, Dict, Optional
 from .builder import (
     create_asset_query_builder,
     create_client_query_builder,
+    create_task_query_builder,
     create_ticket_query_builder,
 )
 from .types import (
@@ -23,6 +24,9 @@ from .types import (
     ClientStatus,
     PaginationArgs,
     SortArgs,
+    TaskFilter,
+    TaskPriority,
+    TaskStatus,
     TicketFilter,
     TicketPriority,
     TicketStatus,
@@ -261,6 +265,248 @@ class CommonQueries:
         """
         builder = create_ticket_query_builder(detail_level, include_comments)
         query = builder.build_get(ticket_id)
+        variables = builder.get_variables()
+
+        return query, variables
+
+    # Task Queries
+    @staticmethod
+    def list_all_tasks(
+        page: int = 1,
+        page_size: int = 50,
+        sort_field: str = "createdAt",
+        sort_direction: str = "DESC",
+        detail_level: str = "core",
+        include_comments: bool = False,
+        include_time_entries: bool = False,
+    ) -> tuple[str, Dict[str, Any]]:
+        """Get all tasks with pagination.
+
+        Args:
+            page: Page number
+            page_size: Items per page
+            sort_field: Field to sort by
+            sort_direction: Sort direction (ASC/DESC)
+            detail_level: Level of detail (summary, core, full)
+            include_comments: Whether to include comments
+            include_time_entries: Whether to include time entries
+
+        Returns:
+            Tuple of (query string, variables dict)
+        """
+        builder = create_task_query_builder(detail_level, include_comments, include_time_entries)
+        pagination = PaginationArgs(page=page, pageSize=page_size)
+        sort_args = SortArgs(field=sort_field, direction=sort_direction)
+
+        query = builder.build_list(pagination=pagination, sort=sort_args)
+        variables = builder.get_variables()
+
+        return query, variables
+
+    @staticmethod
+    def list_tasks_by_status(
+        status: TaskStatus,
+        page: int = 1,
+        page_size: int = 50,
+        detail_level: str = "core",
+    ) -> tuple[str, Dict[str, Any]]:
+        """Get tasks filtered by status.
+
+        Args:
+            status: Task status to filter by
+            page: Page number
+            page_size: Items per page
+            detail_level: Level of detail (summary, core, full)
+
+        Returns:
+            Tuple of (query string, variables dict)
+        """
+        builder = create_task_query_builder(detail_level)
+        task_filter = TaskFilter(status=status)
+        pagination = PaginationArgs(page=page, pageSize=page_size)
+
+        query = builder.build_list(filter_obj=task_filter, pagination=pagination)
+        variables = builder.get_variables()
+
+        return query, variables
+
+    @staticmethod
+    def list_tasks_by_assignee(
+        assignee_id: str,
+        page: int = 1,
+        page_size: int = 50,
+        detail_level: str = "core",
+    ) -> tuple[str, Dict[str, Any]]:
+        """Get tasks assigned to a specific user.
+
+        Args:
+            assignee_id: The assignee user ID
+            page: Page number
+            page_size: Items per page
+            detail_level: Level of detail (summary, core, full)
+
+        Returns:
+            Tuple of (query string, variables dict)
+        """
+        builder = create_task_query_builder(detail_level)
+        task_filter = TaskFilter(assigned_to=assignee_id)
+        pagination = PaginationArgs(page=page, pageSize=page_size)
+
+        query = builder.build_list(filter_obj=task_filter, pagination=pagination)
+        variables = builder.get_variables()
+
+        return query, variables
+
+    @staticmethod
+    def list_overdue_tasks(
+        page: int = 1, page_size: int = 50, detail_level: str = "full"
+    ) -> tuple[str, Dict[str, Any]]:
+        """Get overdue tasks.
+
+        Args:
+            page: Page number
+            page_size: Items per page
+            detail_level: Level of detail (summary, core, full)
+
+        Returns:
+            Tuple of (query string, variables dict)
+        """
+        builder = create_task_query_builder(detail_level)
+        task_filter = TaskFilter(is_overdue=True, is_completed=False)
+        pagination = PaginationArgs(page=page, pageSize=page_size)
+        sort_args = SortArgs(field="dueDate", direction="ASC")
+
+        query = builder.build_list(filter_obj=task_filter, pagination=pagination, sort=sort_args)
+        variables = builder.get_variables()
+
+        return query, variables
+
+    @staticmethod
+    def list_high_priority_tasks(
+        page: int = 1, page_size: int = 50, detail_level: str = "core"
+    ) -> tuple[str, Dict[str, Any]]:
+        """Get high priority and urgent tasks.
+
+        Args:
+            page: Page number
+            page_size: Items per page
+            detail_level: Level of detail (summary, core, full)
+
+        Returns:
+            Tuple of (query string, variables dict)
+        """
+        builder = create_task_query_builder(detail_level)
+
+        # Note: We'll need multiple queries for multiple priorities, or use a custom filter
+        # For now, filtering by HIGH priority
+        task_filter = TaskFilter(priority=TaskPriority.HIGH, is_completed=False)
+        pagination = PaginationArgs(page=page, pageSize=page_size)
+        sort_args = SortArgs(field="dueDate", direction="ASC")
+
+        query = builder.build_list(filter_obj=task_filter, pagination=pagination, sort=sort_args)
+        variables = builder.get_variables()
+
+        return query, variables
+
+    @staticmethod
+    def list_tasks_by_project(
+        project_id: str,
+        page: int = 1,
+        page_size: int = 50,
+        detail_level: str = "core",
+    ) -> tuple[str, Dict[str, Any]]:
+        """Get tasks for a specific project.
+
+        Args:
+            project_id: Project ID
+            page: Page number
+            page_size: Items per page
+            detail_level: Level of detail (summary, core, full)
+
+        Returns:
+            Tuple of (query string, variables dict)
+        """
+        builder = create_task_query_builder(detail_level)
+        task_filter = TaskFilter(project_id=project_id)
+        pagination = PaginationArgs(page=page, pageSize=page_size)
+        sort_args = SortArgs(field="createdAt", direction="DESC")
+
+        query = builder.build_list(filter_obj=task_filter, pagination=pagination, sort=sort_args)
+        variables = builder.get_variables()
+
+        return query, variables
+
+    @staticmethod
+    def list_subtasks(
+        parent_task_id: str,
+        page: int = 1,
+        page_size: int = 50,
+        detail_level: str = "core",
+    ) -> tuple[str, Dict[str, Any]]:
+        """Get subtasks for a specific parent task.
+
+        Args:
+            parent_task_id: Parent task ID
+            page: Page number
+            page_size: Items per page
+            detail_level: Level of detail (summary, core, full)
+
+        Returns:
+            Tuple of (query string, variables dict)
+        """
+        builder = create_task_query_builder(detail_level)
+        task_filter = TaskFilter(parent_task_id=parent_task_id)
+        pagination = PaginationArgs(page=page, pageSize=page_size)
+        sort_args = SortArgs(field="createdAt", direction="ASC")
+
+        query = builder.build_list(filter_obj=task_filter, pagination=pagination, sort=sort_args)
+        variables = builder.get_variables()
+
+        return query, variables
+
+    @staticmethod
+    def list_recurring_tasks(
+        page: int = 1, page_size: int = 50, detail_level: str = "core"
+    ) -> tuple[str, Dict[str, Any]]:
+        """Get recurring tasks.
+
+        Args:
+            page: Page number
+            page_size: Items per page
+            detail_level: Level of detail (summary, core, full)
+
+        Returns:
+            Tuple of (query string, variables dict)
+        """
+        builder = create_task_query_builder(detail_level)
+        task_filter = TaskFilter(is_recurring=True)
+        pagination = PaginationArgs(page=page, pageSize=page_size)
+
+        query = builder.build_list(filter_obj=task_filter, pagination=pagination)
+        variables = builder.get_variables()
+
+        return query, variables
+
+    @staticmethod
+    def get_task_by_id(
+        task_id: str,
+        detail_level: str = "full",
+        include_comments: bool = True,
+        include_time_entries: bool = True,
+    ) -> tuple[str, Dict[str, Any]]:
+        """Get a specific task by ID.
+
+        Args:
+            task_id: Task ID
+            detail_level: Level of detail (summary, core, full)
+            include_comments: Whether to include comments
+            include_time_entries: Whether to include time entries
+
+        Returns:
+            Tuple of (query string, variables dict)
+        """
+        builder = create_task_query_builder(detail_level, include_comments, include_time_entries)
+        query = builder.build_get(task_id)
         variables = builder.get_variables()
 
         return query, variables

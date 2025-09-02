@@ -74,6 +74,39 @@ class ClientStatus(str, Enum):
     SUSPENDED = "SUSPENDED"
 
 
+class TaskStatus(str, Enum):
+    """Task status enumeration."""
+
+    NEW = "NEW"
+    ASSIGNED = "ASSIGNED"
+    IN_PROGRESS = "IN_PROGRESS"
+    COMPLETED = "COMPLETED"
+    CANCELLED = "CANCELLED"
+    ON_HOLD = "ON_HOLD"
+    UNDER_REVIEW = "UNDER_REVIEW"
+
+
+class TaskPriority(str, Enum):
+    """Task priority enumeration."""
+
+    LOW = "LOW"
+    NORMAL = "NORMAL"
+    HIGH = "HIGH"
+    URGENT = "URGENT"
+    CRITICAL = "CRITICAL"
+
+
+class TaskRecurrenceType(str, Enum):
+    """Task recurrence type enumeration."""
+
+    NONE = "NONE"
+    DAILY = "DAILY"
+    WEEKLY = "WEEKLY"
+    MONTHLY = "MONTHLY"
+    YEARLY = "YEARLY"
+    CUSTOM = "CUSTOM"
+
+
 # Base Models
 @dataclass
 class BaseModel:
@@ -224,6 +257,106 @@ class KnowledgeBaseArticle(BaseModel):
     tags: List[str] = field(default_factory=list)
 
 
+# Task Types
+@dataclass
+class Task(BaseModel):
+    """Task model."""
+
+    title: str
+    description: Optional[str] = None
+    status: TaskStatus = TaskStatus.NEW
+    priority: TaskPriority = TaskPriority.NORMAL
+
+    # Project linking - tasks can be standalone or linked to projects
+    project_id: Optional[str] = None
+
+    # Assignment and delegation
+    assigned_to: Optional[str] = None
+    assigned_to_team: Optional[str] = None
+    creator_id: Optional[str] = None
+
+    # Hierarchy support
+    parent_task_id: Optional[str] = None
+    subtask_count: int = 0
+
+    # Due dates and scheduling
+    due_date: Optional[datetime] = None
+    start_date: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+    estimated_hours: Optional[float] = None
+    actual_hours: Optional[float] = None
+
+    # Recurring task support
+    recurrence_type: TaskRecurrenceType = TaskRecurrenceType.NONE
+    recurrence_interval: Optional[int] = None  # e.g., every 2 weeks
+    recurrence_end_date: Optional[datetime] = None
+    parent_recurring_task_id: Optional[str] = None
+
+    # Time tracking
+    time_entries_count: int = 0
+    total_time_logged: Optional[float] = None  # hours
+    billable_time: Optional[float] = None  # hours
+
+    # Categorization and metadata
+    labels: List[str] = field(default_factory=list)
+    tags: List[str] = field(default_factory=list)
+    custom_fields: Dict[str, Any] = field(default_factory=dict)
+
+    # Additional metadata
+    progress_percentage: Optional[int] = None  # 0-100
+    is_milestone: bool = False
+    is_template: bool = False
+    template_id: Optional[str] = None
+
+    # Attachments and links
+    attachment_count: int = 0
+    comment_count: int = 0
+
+    # Alert settings
+    overdue_alert_sent: bool = False
+    reminder_sent: bool = False
+
+
+@dataclass
+class TaskComment(BaseModel):
+    """Task comment model."""
+
+    task_id: str
+    author_id: str
+    author_name: str
+    content: str
+    is_internal: bool = False
+    time_logged: Optional[float] = None  # hours logged with this comment
+
+
+@dataclass
+class TaskTimeEntry(BaseModel):
+    """Task time entry model."""
+
+    task_id: str
+    user_id: str
+    user_name: str
+    hours: float
+    date_logged: datetime
+    description: Optional[str] = None
+    is_billable: bool = True
+    hourly_rate: Optional[float] = None
+
+
+@dataclass
+class TaskTemplate(BaseModel):
+    """Task template model."""
+
+    name: str
+    description: Optional[str] = None
+    default_priority: TaskPriority = TaskPriority.NORMAL
+    estimated_hours: Optional[float] = None
+    default_assignee_id: Optional[str] = None
+    default_tags: List[str] = field(default_factory=list)
+    default_custom_fields: Dict[str, Any] = field(default_factory=dict)
+    checklist_items: List[str] = field(default_factory=list)
+
+
 # Query Filter Types
 @dataclass
 class ClientFilter:
@@ -268,6 +401,62 @@ class AssetFilter:
     status: Optional[AssetStatus] = None
     created_after: Optional[datetime] = None
     created_before: Optional[datetime] = None
+
+
+@dataclass
+class TaskFilter:
+    """Task query filter."""
+
+    # Basic filtering
+    title: Optional[str] = None
+    status: Optional[TaskStatus] = None
+    priority: Optional[TaskPriority] = None
+
+    # Project and hierarchy
+    project_id: Optional[str] = None
+    parent_task_id: Optional[str] = None
+    is_subtask: Optional[bool] = None  # has parent_task_id
+    is_parent: Optional[bool] = None  # has subtasks
+
+    # Assignment
+    assigned_to: Optional[str] = None
+    assigned_to_team: Optional[str] = None
+    creator_id: Optional[str] = None
+    unassigned: Optional[bool] = None
+
+    # Date filtering
+    due_after: Optional[datetime] = None
+    due_before: Optional[datetime] = None
+    start_after: Optional[datetime] = None
+    start_before: Optional[datetime] = None
+    completed_after: Optional[datetime] = None
+    completed_before: Optional[datetime] = None
+    created_after: Optional[datetime] = None
+    created_before: Optional[datetime] = None
+
+    # Status filtering
+    is_overdue: Optional[bool] = None
+    is_completed: Optional[bool] = None
+    is_active: Optional[bool] = None  # not completed or cancelled
+
+    # Recurring tasks
+    recurrence_type: Optional[TaskRecurrenceType] = None
+    is_recurring: Optional[bool] = None
+    is_recurring_instance: Optional[bool] = None
+
+    # Metadata
+    tags: Optional[List[str]] = None
+    labels: Optional[List[str]] = None
+    is_milestone: Optional[bool] = None
+    is_template: Optional[bool] = None
+    template_id: Optional[str] = None
+
+    # Time tracking
+    has_time_entries: Optional[bool] = None
+    estimated_hours_min: Optional[float] = None
+    estimated_hours_max: Optional[float] = None
+    actual_hours_min: Optional[float] = None
+    actual_hours_max: Optional[float] = None
 
 
 # Pagination Types
@@ -372,6 +561,34 @@ class KnowledgeBaseArticlesResponse(PaginatedResponse):
     items: List[KnowledgeBaseArticle]
 
 
+@dataclass
+class TasksResponse(PaginatedResponse):
+    """Tasks query response."""
+
+    items: List[Task]
+
+
+@dataclass
+class TaskCommentsResponse(PaginatedResponse):
+    """Task comments query response."""
+
+    items: List[TaskComment]
+
+
+@dataclass
+class TaskTimeEntriesResponse(PaginatedResponse):
+    """Task time entries query response."""
+
+    items: List[TaskTimeEntry]
+
+
+@dataclass
+class TaskTemplatesResponse(PaginatedResponse):
+    """Task templates query response."""
+
+    items: List[TaskTemplate]
+
+
 # Mutation Input Types
 @dataclass
 class ClientInput:
@@ -472,6 +689,111 @@ class KnowledgeBaseArticleInput:
     is_published: Optional[bool] = None
     is_featured: Optional[bool] = None
     tags: Optional[List[str]] = None
+
+
+@dataclass
+class TaskInput:
+    """Task creation/update input."""
+
+    title: str
+    description: Optional[str] = None
+    status: Optional[TaskStatus] = None
+    priority: Optional[TaskPriority] = None
+
+    # Project linking
+    project_id: Optional[str] = None
+
+    # Assignment
+    assigned_to: Optional[str] = None
+    assigned_to_team: Optional[str] = None
+
+    # Hierarchy
+    parent_task_id: Optional[str] = None
+
+    # Scheduling
+    due_date: Optional[datetime] = None
+    start_date: Optional[datetime] = None
+    estimated_hours: Optional[float] = None
+
+    # Recurring tasks
+    recurrence_type: Optional[TaskRecurrenceType] = None
+    recurrence_interval: Optional[int] = None
+    recurrence_end_date: Optional[datetime] = None
+
+    # Metadata
+    labels: Optional[List[str]] = None
+    tags: Optional[List[str]] = None
+    custom_fields: Optional[Dict[str, Any]] = None
+    progress_percentage: Optional[int] = None
+    is_milestone: Optional[bool] = None
+
+    # Template
+    template_id: Optional[str] = None
+
+
+@dataclass
+class TaskCommentInput:
+    """Task comment creation input."""
+
+    task_id: str
+    content: str
+    is_internal: Optional[bool] = None
+    time_logged: Optional[float] = None
+
+
+@dataclass
+class TaskTimeEntryInput:
+    """Task time entry creation input."""
+
+    task_id: str
+    hours: float
+    description: Optional[str] = None
+    date_logged: Optional[datetime] = None
+    is_billable: Optional[bool] = None
+    hourly_rate: Optional[float] = None
+
+
+@dataclass
+class TaskTemplateInput:
+    """Task template creation/update input."""
+
+    name: str
+    description: Optional[str] = None
+    default_priority: Optional[TaskPriority] = None
+    estimated_hours: Optional[float] = None
+    default_assignee_id: Optional[str] = None
+    default_tags: Optional[List[str]] = None
+    default_custom_fields: Optional[Dict[str, Any]] = None
+    checklist_items: Optional[List[str]] = None
+
+
+@dataclass
+class TaskStatusUpdateInput:
+    """Task status update input for workflow operations."""
+
+    status: TaskStatus
+    comment: Optional[str] = None
+    time_logged: Optional[float] = None
+
+
+@dataclass
+class TaskAssignmentInput:
+    """Task assignment input."""
+
+    assigned_to: Optional[str] = None
+    assigned_to_team: Optional[str] = None
+    notify_assignee: Optional[bool] = True
+    comment: Optional[str] = None
+
+
+@dataclass
+class TaskRecurrenceInput:
+    """Task recurrence configuration input."""
+
+    recurrence_type: TaskRecurrenceType
+    recurrence_interval: Optional[int] = None
+    recurrence_end_date: Optional[datetime] = None
+    recurrence_count: Optional[int] = None  # end after N occurrences
 
 
 # Utility Functions

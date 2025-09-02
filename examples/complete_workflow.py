@@ -4,7 +4,14 @@ import asyncio
 import os
 
 from py_superops import SuperOpsClient, SuperOpsConfig
-from py_superops.graphql import ClientStatus, TicketPriority, TicketStatus
+from py_superops.graphql import (
+    ClientStatus,
+    TaskPriority,
+    TaskRecurrenceType,
+    TaskStatus,
+    TicketPriority,
+    TicketStatus,
+)
 
 
 async def msp_workflow_example() -> None:
@@ -146,6 +153,98 @@ async def msp_workflow_example() -> None:
             # - Add bulk comments for policy updates
             print("✅ Bulk operations ready (demo mode)")
 
+        # 6. TASK MANAGEMENT
+        print("\n✅ 6. Task Management")
+
+        # Create a project task
+        project_task = await client.tasks.create(
+            title="Client Onboarding Project",
+            description="Complete onboarding process for new enterprise client",
+            priority=TaskPriority.HIGH,
+            project_id="onboarding-2024",
+            assigned_to="project-manager",
+            estimated_hours=40.0,
+            tags=["onboarding", "enterprise", "high-priority"],
+        )
+        print(f"Created project task: {project_task.title}")
+
+        # Create subtasks for structured workflow
+        subtasks = []
+        subtask_data = [
+            {
+                "title": "Setup client account and access",
+                "description": "Create client account with proper permissions and access controls",
+                "estimated_hours": 4.0,
+                "assigned_to": "admin-team",
+            },
+            {
+                "title": "Configure monitoring and alerts",
+                "description": "Setup automated monitoring for all client systems",
+                "estimated_hours": 8.0,
+                "assigned_to": "monitoring-team",
+            },
+            {
+                "title": "Deploy security baseline",
+                "description": "Implement security policies and baseline configurations",
+                "estimated_hours": 12.0,
+                "assigned_to": "security-team",
+            },
+        ]
+
+        for subtask_info in subtask_data:
+            subtask = await client.tasks.create_subtask(
+                parent_task_id=project_task.id, **subtask_info
+            )
+            subtasks.append(subtask)
+
+        print(f"Created {len(subtasks)} subtasks for structured workflow")
+
+        # Demonstrate task status management
+        first_subtask = subtasks[0]
+        await client.tasks.change_status(first_subtask.id, TaskStatus.IN_PROGRESS)
+
+        # Log time entry
+        await client.tasks.log_time_entry(
+            task_id=first_subtask.id,
+            hours=2.5,
+            description="Initial account setup and permissions configuration",
+            is_billable=True,
+        )
+        print(f"Started work on: {first_subtask.title} and logged 2.5 hours")
+
+        # Create a recurring maintenance task
+        recurring_task = await client.tasks.create_recurring_task(
+            title="Weekly Client Health Check",
+            description="Perform weekly health checks on all client systems",
+            recurrence_type=TaskRecurrenceType.WEEKLY,
+            recurrence_interval=1,
+            assigned_to="monitoring-team",
+            priority=TaskPriority.NORMAL,
+            estimated_hours=4.0,
+            tags=["maintenance", "health-check", "recurring"],
+        )
+        print(f"Setup recurring task: {recurring_task.title}")
+
+        # Find and manage overdue tasks
+        overdue_tasks = await client.tasks.get_overdue_tasks()
+        if overdue_tasks.get("items"):
+            print(f"Found {len(overdue_tasks['items'])} overdue tasks - escalating priority")
+            for task in overdue_tasks["items"][:3]:  # Limit for demo
+                await client.tasks.change_priority(task["id"], TaskPriority.URGENT)
+
+        # Search for specific tasks
+        security_tasks = await client.tasks.search("security")
+        print(f"Found {len(security_tasks.get('items', []))} security-related tasks")
+
+        # Get task statistics
+        try:
+            stats = await client.tasks.get_task_statistics()
+            print(f"Task Overview: {stats['totalTasks']} total, {stats['overdueCount']} overdue")
+        except Exception:
+            print("Task statistics not available in demo mode")
+
+        print("✅ Task Management Workflow Completed")
+
         print("\n✨ MSP Workflow Example Complete!")
         print("\nThis example demonstrated:")
         print("  ✅ Client management and search")
@@ -153,6 +252,8 @@ async def msp_workflow_example() -> None:
         print("  ✅ Asset warranty tracking")
         print("  ✅ Site management and statistics")
         print("  ✅ Knowledge base search and organization")
+        print("  ✅ Task management with hierarchies and time tracking")
+        print("  ✅ Recurring task automation")
         print("  ✅ Cross-resource data correlation")
         print("  ✅ Bulk operation capabilities")
 

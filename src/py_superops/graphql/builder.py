@@ -19,6 +19,7 @@ from .fragments import (
     get_asset_fields,
     get_client_fields,
     get_kb_fields,
+    get_task_fields,
     get_ticket_fields,
 )
 from .types import (
@@ -32,6 +33,8 @@ from .types import (
     PaginationArgs,
     SiteInput,
     SortArgs,
+    TaskFilter,
+    TaskInput,
     TicketFilter,
     TicketInput,
     serialize_filter_value,
@@ -543,6 +546,155 @@ comments {
         return self.build("ticket", "id: $id")
 
 
+class TaskQueryBuilder(SelectionQueryBuilder):
+    """Builder for task-related queries."""
+
+    def __init__(
+        self,
+        detail_level: str = "core",
+        include_comments: bool = False,
+        include_time_entries: bool = False,
+        include_template: bool = False,
+    ):
+        """Initialize task query builder.
+
+        Args:
+            detail_level: Level of detail (summary, core, full)
+            include_comments: Whether to include comment fields
+            include_time_entries: Whether to include time entry fields
+            include_template: Whether to include template fields
+        """
+        super().__init__()
+        self.detail_level = detail_level
+        self.include_comments = include_comments
+        self.include_time_entries = include_time_entries
+        self.include_template = include_template
+        self.add_fragments(
+            get_task_fields(detail_level, include_comments, include_time_entries, include_template)
+        )
+
+    def list_tasks(
+        self,
+        filter_obj: Optional[TaskFilter] = None,
+        pagination: Optional[PaginationArgs] = None,
+        sort: Optional[SortArgs] = None,
+    ) -> "TaskQueryBuilder":
+        """Build a list tasks query.
+
+        Args:
+            filter_obj: Task filter
+            pagination: Pagination arguments
+            sort: Sort arguments
+
+        Returns:
+            Self for chaining
+        """
+        # Build arguments
+        args = []
+
+        if filter_obj:
+            self.add_variable("filter", "TaskFilter", serialize_input(filter_obj))
+            args.append("filter: $filter")
+
+        if pagination:
+            self.add_variable("page", "Int", pagination.page)
+            self.add_variable("pageSize", "Int", pagination.pageSize)
+            args.append("page: $page, pageSize: $pageSize")
+
+        if sort:
+            self.add_variable("sortField", "String", sort.field)
+            self.add_variable("sortDirection", "SortDirection", sort.direction)
+            args.append("sortField: $sortField, sortDirection: $sortDirection")
+
+        # Add selections
+        fragment_name = get_task_fields(
+            self.detail_level,
+            self.include_comments,
+            self.include_time_entries,
+            self.include_template,
+        )
+        fragment_spread = f"...{list(fragment_name)[0]}"
+
+        return (
+            self.add_selection(
+                f"""items {{
+  {fragment_spread}
+}}"""
+            )
+            .add_selection(
+                """pagination {
+  ...PaginationInfo
+}"""
+            )
+            .add_fragment("PaginationInfo")
+        )
+
+    def get_task(self, task_id: str) -> "TaskQueryBuilder":
+        """Build a get task by ID query.
+
+        Args:
+            task_id: Task ID
+
+        Returns:
+            Self for chaining
+        """
+        self.add_variable("id", "ID!", task_id)
+
+        fragment_name = get_task_fields(
+            self.detail_level,
+            self.include_comments,
+            self.include_time_entries,
+            self.include_template,
+        )
+        fragment_spread = f"...{list(fragment_name)[0]}"
+
+        return self.add_selection(fragment_spread)
+
+    def build_list(
+        self,
+        filter_obj: Optional[TaskFilter] = None,
+        pagination: Optional[PaginationArgs] = None,
+        sort: Optional[SortArgs] = None,
+    ) -> str:
+        """Build complete list tasks query.
+
+        Args:
+            filter_obj: Task filter
+            pagination: Pagination arguments
+            sort: Sort arguments
+
+        Returns:
+            Complete GraphQL query string
+        """
+        self.list_tasks(filter_obj, pagination, sort)
+        args = ", ".join(
+            [
+                arg
+                for arg in [
+                    "filter: $filter",
+                    "page: $page",
+                    "pageSize: $pageSize",
+                    "sortField: $sortField",
+                    "sortDirection: $sortDirection",
+                ]
+                if any(var in self._variables for var in arg.split("$")[1:] if "$" in arg)
+            ]
+        )
+        return self.build("tasks", args)
+
+    def build_get(self, task_id: str) -> str:
+        """Build complete get task query.
+
+        Args:
+            task_id: Task ID
+
+        Returns:
+            Complete GraphQL query string
+        """
+        self.get_task(task_id)
+        return self.build("task", "id: $id")
+
+
 class AssetQueryBuilder(SelectionQueryBuilder):
     """Builder for asset-related queries."""
 
@@ -798,3 +950,23 @@ def create_ticket_mutation_builder(detail_level: str = "core") -> TicketMutation
         TicketMutationBuilder instance
     """
     return TicketMutationBuilder(detail_level)
+
+
+def create_task_query_builder(
+    detail_level: str = "core",
+    include_comments: bool = False,
+    include_time_entries: bool = False,
+    include_template: bool = False,
+) -> TaskQueryBuilder:
+    """Create a task query builder.
+
+    Args:
+        detail_level: Level of detail (summary, core, full)
+        include_comments: Whether to include comment fields
+        include_time_entries: Whether to include time entry fields
+        include_template: Whether to include template fields
+
+    Returns:
+        TaskQueryBuilder instance
+    """
+    return TaskQueryBuilder(detail_level, include_comments, include_time_entries, include_template)
