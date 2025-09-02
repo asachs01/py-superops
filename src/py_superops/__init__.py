@@ -107,6 +107,7 @@ try:
         ResourceManager,
         SiteManager,
         TicketManager,
+        TimeEntriesManager,
     )
 
     _MANAGERS_AVAILABLE = True
@@ -124,9 +125,16 @@ try:
         SuperOpsQueries,
         TicketPriority,
         TicketStatus,
+        TimeEntry,
+        TimeEntryStatus,
+        TimeEntryTemplate,
+        TimeEntryType,
+        Timer,
+        TimerState,
         build_asset_list_query,
         build_client_list_query,
         build_ticket_list_query,
+        build_time_entry_list_query,
     )
 
     _GRAPHQL_AVAILABLE = True
@@ -169,6 +177,7 @@ __all__ = [
             "KnowledgeBaseManager",
             "KnowledgeBaseArticleManager",
             "KnowledgeBaseCollectionManager",
+            "TimeEntriesManager",
         ]
         if _MANAGERS_AVAILABLE
         else []
@@ -180,6 +189,12 @@ __all__ = [
             "TicketStatus",
             "TicketPriority",
             "AssetStatus",
+            "TimeEntry",
+            "TimeEntryStatus",
+            "TimeEntryType",
+            "TimerState",
+            "Timer",
+            "TimeEntryTemplate",
             "PaginationArgs",
             "SortArgs",
             "CommonQueries",
@@ -187,6 +202,7 @@ __all__ = [
             "build_client_list_query",
             "build_ticket_list_query",
             "build_asset_list_query",
+            "build_time_entry_list_query",
         ]
         if _GRAPHQL_AVAILABLE
         else []

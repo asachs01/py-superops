@@ -29,6 +29,7 @@ if TYPE_CHECKING:
         KnowledgeBaseManager,
         SiteManager,
         TicketManager,
+        TimeEntriesManager,
     )
 
 logger = logging.getLogger(__name__)
@@ -84,6 +85,7 @@ class SuperOpsClient:
         self._sites_manager = None
         self._contacts_manager = None
         self._knowledge_base_manager = None
+        self._time_entries_manager = None
 
         # Setup logging
         logging.basicConfig(level=getattr(logging, config.log_level), format=config.log_format)
@@ -153,6 +155,15 @@ class SuperOpsClient:
 
             self._knowledge_base_manager = KnowledgeBaseManager(self)
         return self._knowledge_base_manager
+
+    @property
+    def time_entries(self) -> "TimeEntriesManager":
+        """Get the time entries manager for time tracking operations."""
+        if self._time_entries_manager is None:
+            from .managers import TimeEntriesManager
+
+            self._time_entries_manager = TimeEntriesManager(self)
+        return self._time_entries_manager
 
     async def __aenter__(self) -> "SuperOpsClient":
         """Async context manager entry."""

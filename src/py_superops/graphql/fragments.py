@@ -325,6 +325,106 @@ KB_ARTICLE_SUMMARY_FIELDS = GraphQLFragment(
     """,
 )
 
+# Time Entry fragments
+TIME_ENTRY_CORE_FIELDS = GraphQLFragment(
+    name="TimeEntryCoreFields",
+    on_type="TimeEntry",
+    fields="""
+    ...BaseFields
+    userId
+    description
+    startTime
+    endTime
+    durationMinutes
+    status
+    entryType
+    isBillable
+    """,
+    dependencies={"BaseFields"},
+)
+
+TIME_ENTRY_FULL_FIELDS = GraphQLFragment(
+    name="TimeEntryFullFields",
+    on_type="TimeEntry",
+    fields="""
+    ...TimeEntryCoreFields
+    ticketId
+    taskId
+    projectId
+    clientId
+    hourlyRate
+    totalAmount
+    workCategory
+    notes
+    approvalNotes
+    approvedBy
+    approvedAt
+    tags
+    customFields
+    """,
+    dependencies={"TimeEntryCoreFields"},
+)
+
+TIME_ENTRY_SUMMARY_FIELDS = GraphQLFragment(
+    name="TimeEntrySummaryFields",
+    on_type="TimeEntry",
+    fields="""
+    id
+    description
+    startTime
+    endTime
+    durationMinutes
+    status
+    isBillable
+    totalAmount
+    createdAt
+    """,
+)
+
+TIMER_FIELDS = GraphQLFragment(
+    name="TimerFields",
+    on_type="Timer",
+    fields="""
+    ...BaseFields
+    userId
+    timeEntryId
+    description
+    startTime
+    pausedTime
+    totalPausedDuration
+    currentDuration
+    state
+    ticketId
+    taskId
+    projectId
+    clientId
+    isBillable
+    entryType
+    workCategory
+    tags
+    """,
+    dependencies={"BaseFields"},
+)
+
+TIME_ENTRY_TEMPLATE_FIELDS = GraphQLFragment(
+    name="TimeEntryTemplateFields",
+    on_type="TimeEntryTemplate",
+    fields="""
+    ...BaseFields
+    name
+    description
+    userId
+    defaultDurationMinutes
+    entryType
+    isBillable
+    workCategory
+    tags
+    customFields
+    isActive
+    """,
+    dependencies={"BaseFields"},
+)
+
 
 # Fragment collections for easy access
 ALL_FRAGMENTS = {
@@ -351,6 +451,11 @@ ALL_FRAGMENTS = {
         KB_ARTICLE_CORE_FIELDS,
         KB_ARTICLE_FULL_FIELDS,
         KB_ARTICLE_SUMMARY_FIELDS,
+        TIME_ENTRY_CORE_FIELDS,
+        TIME_ENTRY_FULL_FIELDS,
+        TIME_ENTRY_SUMMARY_FIELDS,
+        TIMER_FIELDS,
+        TIME_ENTRY_TEMPLATE_FIELDS,
     ]
 }
 
@@ -389,6 +494,20 @@ KB_FRAGMENTS = {
     "article_core": KB_ARTICLE_CORE_FIELDS,
     "article_full": KB_ARTICLE_FULL_FIELDS,
     "article_summary": KB_ARTICLE_SUMMARY_FIELDS,
+}
+
+TIME_ENTRY_FRAGMENTS = {
+    "core": TIME_ENTRY_CORE_FIELDS,
+    "full": TIME_ENTRY_FULL_FIELDS,
+    "summary": TIME_ENTRY_SUMMARY_FIELDS,
+}
+
+TIMER_FRAGMENTS = {
+    "fields": TIMER_FIELDS,
+}
+
+TIME_ENTRY_TEMPLATE_FRAGMENTS = {
+    "fields": TIME_ENTRY_TEMPLATE_FIELDS,
 }
 
 
@@ -564,3 +683,38 @@ def get_kb_fields(collection_detail: str = "core", article_detail: str = "core")
         fragments.add(article_mapping[article_detail])
 
     return fragments
+
+
+def get_time_entry_fields(detail_level: str = "core") -> Set[str]:
+    """Get time entry fragment names for specified detail level.
+
+    Args:
+        detail_level: Level of detail (summary, core, full)
+
+    Returns:
+        Set of fragment names
+    """
+    mapping = {
+        "summary": {"TimeEntrySummaryFields"},
+        "core": {"TimeEntryCoreFields"},
+        "full": {"TimeEntryFullFields"},
+    }
+    return mapping.get(detail_level, {"TimeEntryCoreFields"})
+
+
+def get_timer_fields() -> Set[str]:
+    """Get timer fragment names.
+
+    Returns:
+        Set of fragment names
+    """
+    return {"TimerFields"}
+
+
+def get_time_entry_template_fields() -> Set[str]:
+    """Get time entry template fragment names.
+
+    Returns:
+        Set of fragment names
+    """
+    return {"TimeEntryTemplateFields"}

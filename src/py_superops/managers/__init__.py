@@ -59,6 +59,7 @@ from .knowledge_base import (
 )
 from .sites import SiteManager
 from .tickets import TicketManager
+from .time_entries import TimeEntriesManager
 
 __all__ = [
     # Base manager
@@ -72,6 +73,7 @@ __all__ = [
     "KnowledgeBaseManager",
     "KnowledgeBaseArticleManager",
     "KnowledgeBaseCollectionManager",
+    "TimeEntriesManager",
 ]
 
 # Manager registry for dynamic access
@@ -82,6 +84,7 @@ MANAGER_REGISTRY = {
     "sites": SiteManager,
     "contacts": ContactManager,
     "knowledge_base": KnowledgeBaseManager,
+    "time_entries": TimeEntriesManager,
 }
 
 

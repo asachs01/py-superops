@@ -8,7 +8,15 @@ import httpx
 import pytest
 
 from py_superops import AuthHandler, SuperOpsClient, SuperOpsConfig
-from py_superops.graphql.types import AssetStatus, ClientStatus, TicketPriority, TicketStatus
+from py_superops.graphql.types import (
+    AssetStatus,
+    ClientStatus,
+    TicketPriority,
+    TicketStatus,
+    TimeEntryStatus,
+    TimeEntryType,
+    TimerState,
+)
 
 # Test configuration fixtures
 
