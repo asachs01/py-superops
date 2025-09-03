@@ -90,14 +90,15 @@ class TestTasksManager:
                             "description": "First task",
                             "status": "NEW",
                             "priority": "HIGH",
-                            "projectId": "project-456",
-                            "assignedTo": "user-789",
-                            "creatorId": "user-111",
-                            "dueDate": "2024-12-31T23:59:59Z",
-                            "estimatedHours": 8.0,
-                            "actualHours": 0.0,
+                            "project_id": "project-456",
+                            "assigned_to": "user-789",
+                            "creator_id": "user-111",
+                            "due_date": "2024-12-31T23:59:59Z",
+                            "estimated_hours": 8.0,
+                            "actual_hours": 0.0,
                             "tags": ["urgent"],
-                            "createdAt": "2024-01-01T00:00:00Z",
+                            "created_at": "2024-01-01T00:00:00Z",
+                            "updated_at": "2024-01-01T00:00:00Z",
                         },
                         {
                             "id": "task-2",
@@ -105,14 +106,15 @@ class TestTasksManager:
                             "description": "Second task",
                             "status": "IN_PROGRESS",
                             "priority": "NORMAL",
-                            "projectId": "project-456",
-                            "assignedTo": "user-789",
-                            "creatorId": "user-111",
-                            "dueDate": "2024-11-30T23:59:59Z",
-                            "estimatedHours": 4.0,
-                            "actualHours": 2.0,
+                            "project_id": "project-456",
+                            "assigned_to": "user-789",
+                            "creator_id": "user-111",
+                            "due_date": "2024-11-30T23:59:59Z",
+                            "estimated_hours": 4.0,
+                            "actual_hours": 2.0,
                             "tags": ["development"],
-                            "createdAt": "2024-01-02T00:00:00Z",
+                            "created_at": "2024-01-02T00:00:00Z",
+                            "updated_at": "2024-01-02T00:00:00Z",
                         },
                     ],
                     "pagination": {
@@ -132,11 +134,11 @@ class TestTasksManager:
         return {
             "title": "New Task",
             "description": "A new task for testing",
-            "projectId": "project-123",
-            "assignedTo": "user-456",
+            "project_id": "project-123",
+            "assigned_to": "user-456",
             "priority": TaskPriority.HIGH,
-            "dueDate": "2024-12-31",
-            "estimatedHours": 10.0,
+            "due_date": "2024-12-31",
+            "estimated_hours": 10.0,
             "tags": ["new", "testing"],
         }
 
@@ -148,8 +150,8 @@ class TestTasksManager:
             "description": "Updated description",
             "status": TaskStatus.IN_PROGRESS,
             "priority": TaskPriority.LOW,
-            "estimatedHours": 12.0,
-            "actualHours": 6.0,
+            "estimated_hours": 12.0,
+            "actual_hours": 6.0,
         }
 
     # Test CRUD Operations
@@ -199,8 +201,8 @@ class TestTasksManager:
         assert "items" in result
         assert "pagination" in result
         assert len(result["items"]) == 2
-        assert result["items"][0]["id"] == "task-1"
-        assert result["items"][1]["id"] == "task-2"
+        assert result["items"][0].id == "task-1"
+        assert result["items"][1].id == "task-2"
 
         mock_client.execute_query.assert_called_once()
 
@@ -214,8 +216,8 @@ class TestTasksManager:
         filters = {
             "status": TaskStatus.IN_PROGRESS,
             "priority": TaskPriority.HIGH,
-            "assignedTo": "user-789",
-            "projectId": "project-456",
+            "assigned_to": "user-789",
+            "project_id": "project-456",
         }
 
         result = await tasks_manager.list(page=2, page_size=25, filters=filters)
@@ -229,8 +231,8 @@ class TestTasksManager:
         assert variables["pageSize"] == 25
         assert variables["filters"]["status"] == TaskStatus.IN_PROGRESS
         assert variables["filters"]["priority"] == TaskPriority.HIGH
-        assert variables["filters"]["assignedTo"] == "user-789"
-        assert variables["filters"]["projectId"] == "project-456"
+        assert variables["filters"]["assigned_to"] == "user-789"
+        assert variables["filters"]["project_id"] == "project-456"
 
     @pytest.mark.asyncio
     async def test_create_task_success(self, tasks_manager, mock_client, sample_create_task_data):
@@ -243,23 +245,24 @@ class TestTasksManager:
                     "description": "A new task for testing",
                     "status": "NEW",
                     "priority": "HIGH",
-                    "projectId": "project-123",
-                    "assignedTo": "user-456",
-                    "creatorId": "current-user",
-                    "dueDate": "2024-12-31T00:00:00Z",
-                    "estimatedHours": 10.0,
+                    "project_id": "project-123",
+                    "assigned_to": "user-456",
+                    "creator_id": "current-user",
+                    "due_date": "2024-12-31T00:00:00Z",
+                    "estimated_hours": 10.0,
                     "tags": ["new", "testing"],
-                    "createdAt": "2024-01-01T00:00:00Z",
+                    "created_at": "2024-01-01T00:00:00Z",
+                    "updated_at": "2024-01-01T00:00:00Z",
                 }
             }
         }
         mock_client.execute_mutation.return_value = created_task
 
-        result = await tasks_manager.create(**sample_create_task_data)
+        result = await tasks_manager.create(sample_create_task_data)
 
-        assert result["id"] == "task-new-123"
-        assert result["title"] == "New Task"
-        assert result["priority"] == "HIGH"
+        assert result.id == "task-new-123"
+        assert result.title == "New Task"
+        assert result.priority == TaskPriority.HIGH
 
         mock_client.execute_mutation.assert_called_once()
         call_args = mock_client.execute_mutation.call_args
@@ -285,9 +288,9 @@ class TestTasksManager:
                     "description": "Updated description",
                     "status": "IN_PROGRESS",
                     "priority": "LOW",
-                    "estimatedHours": 12.0,
-                    "actualHours": 6.0,
-                    "updatedAt": "2024-01-15T12:00:00Z",
+                    "estimated_hours": 12.0,
+                    "actual_hours": 6.0,
+                    "updated_at": "2024-01-15T12:00:00Z",
                 }
             }
         }
@@ -295,9 +298,9 @@ class TestTasksManager:
 
         result = await tasks_manager.update("task-123", **sample_update_task_data)
 
-        assert result["id"] == "task-123"
-        assert result["title"] == "Updated Task Title"
-        assert result["status"] == "IN_PROGRESS"
+        assert result.id == "task-123"
+        assert result.title == "Updated Task Title"
+        assert result.status == TaskStatus.IN_PROGRESS
 
         mock_client.execute_mutation.assert_called_once()
 
@@ -337,7 +340,7 @@ class TestTasksManager:
                 "updateTask": {
                     "id": "task-123",
                     "status": "IN_PROGRESS",
-                    "updatedAt": "2024-01-15T12:00:00Z",
+                    "updated_at": "2024-01-15T12:00:00Z",
                 }
             }
         }
@@ -345,7 +348,7 @@ class TestTasksManager:
 
         result = await tasks_manager.change_status("task-123", TaskStatus.IN_PROGRESS)
 
-        assert result["status"] == "IN_PROGRESS"
+        assert result.status == TaskStatus.IN_PROGRESS
 
         mock_client.execute_mutation.assert_called_once()
 
@@ -358,7 +361,7 @@ class TestTasksManager:
                     "id": "task-123",
                     "status": "COMPLETED",
                     "completionPercentage": 100.0,
-                    "updatedAt": "2024-01-15T12:00:00Z",
+                    "updated_at": "2024-01-15T12:00:00Z",
                 }
             }
         }
@@ -366,7 +369,7 @@ class TestTasksManager:
 
         result = await tasks_manager.complete_task("task-123")
 
-        assert result["status"] == "COMPLETED"
+        assert result.status == TaskStatus.COMPLETED
         assert result["completionPercentage"] == 100.0
 
     @pytest.mark.asyncio
@@ -376,9 +379,9 @@ class TestTasksManager:
             "data": {
                 "updateTask": {
                     "id": "task-123",
-                    "assignedTo": "user-456",
+                    "assigned_to": "user-456",
                     "status": "ASSIGNED",
-                    "updatedAt": "2024-01-15T12:00:00Z",
+                    "updated_at": "2024-01-15T12:00:00Z",
                 }
             }
         }
@@ -386,8 +389,8 @@ class TestTasksManager:
 
         result = await tasks_manager.assign_task("task-123", "user-456")
 
-        assert result["assignedTo"] == "user-456"
-        assert result["status"] == "ASSIGNED"
+        assert result.assigned_to == "user-456"
+        assert result.status == TaskStatus.ASSIGNED
 
     # Test Task Filtering Methods
 
@@ -419,7 +422,7 @@ class TestTasksManager:
 
         call_args = mock_client.execute_query.call_args
         variables = call_args[0][1]
-        assert variables["filters"]["projectId"] == "project-456"
+        assert variables["filters"]["project_id"] == "project-456"
 
     @pytest.mark.asyncio
     async def test_list_assigned_tasks(self, tasks_manager, mock_client, sample_task_list_response):
@@ -432,7 +435,7 @@ class TestTasksManager:
 
         call_args = mock_client.execute_query.call_args
         variables = call_args[0][1]
-        assert variables["filters"]["assignedTo"] == "user-789"
+        assert variables["filters"]["assigned_to"] == "user-789"
 
     @pytest.mark.asyncio
     async def test_get_overdue_tasks(self, tasks_manager, mock_client, sample_task_list_response):
@@ -474,7 +477,7 @@ class TestTasksManager:
 
         call_args = mock_client.execute_query.call_args
         variables = call_args[0][1]
-        assert variables["filters"]["parentTaskId"] == "parent-task-123"
+        assert variables["filters"]["parent_task_id"] == "parent-task-123"
 
     @pytest.mark.asyncio
     async def test_create_subtask_success(self, tasks_manager, mock_client):
@@ -487,9 +490,9 @@ class TestTasksManager:
                     "description": "A subtask for testing",
                     "status": "NEW",
                     "priority": "NORMAL",
-                    "parentTaskId": "parent-task-123",
-                    "creatorId": "current-user",
-                    "createdAt": "2024-01-01T00:00:00Z",
+                    "parent_task_id": "parent-task-123",
+                    "creator_id": "current-user",
+                    "created_at": "2024-01-01T00:00:00Z",
                 }
             }
         }
@@ -499,8 +502,8 @@ class TestTasksManager:
             parent_task_id="parent-task-123", title="Subtask", description="A subtask for testing"
         )
 
-        assert result["id"] == "subtask-123"
-        assert result["parentTaskId"] == "parent-task-123"
+        assert result.id == "subtask-123"
+        assert result.parent_task_id == "parent-task-123"
 
     # Test Recurring Tasks
 
@@ -515,11 +518,11 @@ class TestTasksManager:
                     "description": "A recurring task for testing",
                     "status": "NEW",
                     "priority": "NORMAL",
-                    "isRecurring": True,
-                    "recurrenceType": "DAILY",
+                    "is_recurring": True,
+                    "recurrence_type": "DAILY",
                     "recurrenceInterval": 1,
-                    "nextDueDate": "2024-01-02T00:00:00Z",
-                    "createdAt": "2024-01-01T00:00:00Z",
+                    "next_due_date": "2024-01-02T00:00:00Z",
+                    "created_at": "2024-01-01T00:00:00Z",
                 }
             }
         }
@@ -533,9 +536,9 @@ class TestTasksManager:
             start_date="2024-01-01",
         )
 
-        assert result["id"] == "recurring-task-123"
-        assert result["isRecurring"] is True
-        assert result["recurrenceType"] == "DAILY"
+        assert result.id == "recurring-task-123"
+        assert result["is_recurring"] is True
+        assert result.recurrence_type == TaskRecurrenceType.DAILY
 
     @pytest.mark.asyncio
     async def test_list_recurring_tasks(
@@ -550,42 +553,42 @@ class TestTasksManager:
 
         call_args = mock_client.execute_query.call_args
         variables = call_args[0][1]
-        assert variables["filters"]["isRecurring"] is True
+        assert variables["filters"]["is_recurring"] is True
 
     # Test Time Tracking
 
     @pytest.mark.asyncio
-    async def test_log_time_entry_success(self, tasks_manager, mock_client):
+    async def test_log_time_success(self, tasks_manager, mock_client):
         """Test successful time entry logging."""
         time_entry_response = {
             "data": {
                 "createTaskTimeEntry": {
                     "id": "time-entry-123",
-                    "taskId": "task-123",
-                    "userId": "user-456",
+                    "task_id": "task-123",
+                    "user_id": "user-456",
                     "hours": 2.5,
                     "description": "Working on feature implementation",
                     "date": "2024-01-15",
                     "isBillable": True,
-                    "createdAt": "2024-01-15T12:00:00Z",
+                    "created_at": "2024-01-15T12:00:00Z",
                 }
             }
         }
         mock_client.execute_mutation.return_value = time_entry_response
 
-        result = await tasks_manager.log_time_entry(
+        result = await tasks_manager.log_time(
             task_id="task-123",
             hours=2.5,
             description="Working on feature implementation",
             is_billable=True,
         )
 
-        assert result["id"] == "time-entry-123"
-        assert result["hours"] == 2.5
-        assert result["isBillable"] is True
+        assert result.id == "time-entry-123"
+        assert result.hours == 2.5
+        assert result.is_billable is True
 
     @pytest.mark.asyncio
-    async def test_get_task_time_entries(self, tasks_manager, mock_client):
+    async def test_get_time_entries(self, tasks_manager, mock_client):
         """Test getting task time entries."""
         time_entries_response = {
             "data": {
@@ -593,8 +596,8 @@ class TestTasksManager:
                     "items": [
                         {
                             "id": "time-entry-1",
-                            "taskId": "task-123",
-                            "userId": "user-456",
+                            "task_id": "task-123",
+                            "user_id": "user-456",
                             "hours": 2.0,
                             "description": "Initial work",
                             "date": "2024-01-15",
@@ -602,8 +605,8 @@ class TestTasksManager:
                         },
                         {
                             "id": "time-entry-2",
-                            "taskId": "task-123",
-                            "userId": "user-456",
+                            "task_id": "task-123",
+                            "user_id": "user-456",
                             "hours": 1.5,
                             "description": "Bug fixes",
                             "date": "2024-01-16",
@@ -622,11 +625,11 @@ class TestTasksManager:
         }
         mock_client.execute_query.return_value = time_entries_response
 
-        result = await tasks_manager.get_task_time_entries("task-123")
+        result = await tasks_manager.get_time_entries("task-123")
 
         assert len(result["items"]) == 2
-        assert result["items"][0]["hours"] == 2.0
-        assert result["items"][1]["hours"] == 1.5
+        assert result["items"][0].hours == 2.0
+        assert result["items"][1].hours == 1.5
 
     @pytest.mark.asyncio
     async def test_update_time_tracking_success(self, tasks_manager, mock_client):
@@ -635,9 +638,9 @@ class TestTasksManager:
             "data": {
                 "updateTask": {
                     "id": "task-123",
-                    "actualHours": 8.0,
+                    "actual_hours": 8.0,
                     "billableHours": 6.0,
-                    "updatedAt": "2024-01-15T12:00:00Z",
+                    "updated_at": "2024-01-15T12:00:00Z",
                 }
             }
         }
@@ -647,7 +650,7 @@ class TestTasksManager:
             task_id="task-123", actual_hours=8.0, billable_hours=6.0
         )
 
-        assert result["actualHours"] == 8.0
+        assert result["actual_hours"] == 8.0
         assert result["billableHours"] == 6.0
 
     # Test Comments
@@ -659,11 +662,11 @@ class TestTasksManager:
             "data": {
                 "createTaskComment": {
                     "id": "comment-123",
-                    "taskId": "task-123",
-                    "userId": "user-456",
+                    "task_id": "task-123",
+                    "user_id": "user-456",
                     "comment": "This is a test comment",
                     "isInternal": False,
-                    "createdAt": "2024-01-15T12:00:00Z",
+                    "created_at": "2024-01-15T12:00:00Z",
                     "user": {"id": "user-456", "name": "Test User", "email": "test@example.com"},
                 }
             }
@@ -674,7 +677,7 @@ class TestTasksManager:
             task_id="task-123", comment="This is a test comment"
         )
 
-        assert result["id"] == "comment-123"
+        assert result.id == "comment-123"
         assert result["comment"] == "This is a test comment"
 
     @pytest.mark.asyncio
@@ -686,19 +689,19 @@ class TestTasksManager:
                     "items": [
                         {
                             "id": "comment-1",
-                            "taskId": "task-123",
-                            "userId": "user-456",
+                            "task_id": "task-123",
+                            "user_id": "user-456",
                             "comment": "First comment",
                             "isInternal": False,
-                            "createdAt": "2024-01-15T10:00:00Z",
+                            "created_at": "2024-01-15T10:00:00Z",
                         },
                         {
                             "id": "comment-2",
-                            "taskId": "task-123",
-                            "userId": "user-789",
+                            "task_id": "task-123",
+                            "user_id": "user-789",
                             "comment": "Second comment",
                             "isInternal": True,
-                            "createdAt": "2024-01-15T11:00:00Z",
+                            "created_at": "2024-01-15T11:00:00Z",
                         },
                     ],
                     "pagination": {
@@ -716,8 +719,8 @@ class TestTasksManager:
         result = await tasks_manager.get_task_comments("task-123")
 
         assert len(result["items"]) == 2
-        assert result["items"][0]["comment"] == "First comment"
-        assert result["items"][1]["comment"] == "Second comment"
+        assert result["items"][0].content == "First comment"
+        assert result["items"][1].content == "Second comment"
 
     # Test Search and Batch Operations
 
@@ -793,10 +796,10 @@ class TestTasksManager:
                     "isActive": True,
                     "taskDefaults": {
                         "priority": "HIGH",
-                        "estimatedHours": 4.0,
+                        "estimated_hours": 4.0,
                         "tags": ["bug", "fix"],
                     },
-                    "createdAt": "2024-01-15T12:00:00Z",
+                    "created_at": "2024-01-15T12:00:00Z",
                 }
             }
         }
@@ -807,12 +810,12 @@ class TestTasksManager:
             description="Standard template for bug fix tasks",
             task_defaults={
                 "priority": TaskPriority.HIGH,
-                "estimatedHours": 4.0,
+                "estimated_hours": 4.0,
                 "tags": ["bug", "fix"],
             },
         )
 
-        assert result["id"] == "template-123"
+        assert result.id == "template-123"
         assert result["name"] == "Bug Fix Template"
 
     @pytest.mark.asyncio
@@ -827,9 +830,9 @@ class TestTasksManager:
                     "status": "NEW",
                     "priority": "HIGH",
                     "templateId": "template-123",
-                    "estimatedHours": 4.0,
+                    "estimated_hours": 4.0,
                     "tags": ["bug", "fix", "login"],
-                    "createdAt": "2024-01-15T12:00:00Z",
+                    "created_at": "2024-01-15T12:00:00Z",
                 }
             }
         }
@@ -842,7 +845,7 @@ class TestTasksManager:
             assigned_to="user-456",
         )
 
-        assert result["id"] == "task-from-template-123"
+        assert result.id == "task-from-template-123"
         assert result["templateId"] == "template-123"
         assert result["priority"] == "HIGH"
 
@@ -875,13 +878,13 @@ class TestTasksManager:
             await tasks_manager.assign_task("task-123", "")
 
     @pytest.mark.asyncio
-    async def test_log_time_entry_invalid_hours(self, tasks_manager):
+    async def test_log_time_invalid_hours(self, tasks_manager):
         """Test log time entry with invalid hours."""
         with pytest.raises(SuperOpsValidationError, match="Hours must be positive"):
-            await tasks_manager.log_time_entry("task-123", hours=-1.0)
+            await tasks_manager.log_time("task-123", hours=-1.0)
 
         with pytest.raises(SuperOpsValidationError, match="Hours must be positive"):
-            await tasks_manager.log_time_entry("task-123", hours=0.0)
+            await tasks_manager.log_time("task-123", hours=0.0)
 
     # Test Priority and Status Workflows
 
@@ -893,7 +896,7 @@ class TestTasksManager:
                 "updateTask": {
                     "id": "task-123",
                     "priority": "HIGH",
-                    "updatedAt": "2024-01-15T12:00:00Z",
+                    "updated_at": "2024-01-15T12:00:00Z",
                 }
             }
         }

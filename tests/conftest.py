@@ -278,15 +278,15 @@ def sample_task_data() -> Dict[str, Any]:
     return {
         "title": "Sample Task",
         "description": "This is a sample task for testing",
-        "projectId": "project-123",
-        "assignedTo": "user-456",
+        "project_id": "project-123",
+        "assigned_to": "user-456",
         "priority": TaskPriority.NORMAL,
         "status": TaskStatus.NEW,
-        "dueDate": "2024-12-31",
-        "estimatedHours": 8.0,
+        "due_date": "2024-12-31",
+        "estimated_hours": 8.0,
         "tags": ["test", "sample"],
-        "customFields": {"environment": "development"},
-        "isBillable": True,
+        "custom_fields": {"environment": "development"},
+        "is_billable": True,
     }
 
 
@@ -296,13 +296,13 @@ def sample_task_template_data() -> Dict[str, Any]:
     return {
         "name": "Bug Fix Template",
         "description": "Standard template for bug fix tasks",
-        "taskDefaults": {
+        "task_defaults": {
             "priority": TaskPriority.HIGH,
-            "estimatedHours": 4.0,
+            "estimated_hours": 4.0,
             "tags": ["bug", "fix"],
-            "isBillable": True,
+            "is_billable": True,
         },
-        "isActive": True,
+        "is_active": True,
     }
 
 
@@ -313,11 +313,11 @@ def sample_recurring_task_data() -> Dict[str, Any]:
         "title": "Weekly Status Report",
         "description": "Generate and send weekly status report",
         "priority": TaskPriority.NORMAL,
-        "recurrenceType": TaskRecurrenceType.WEEKLY,
-        "recurrenceInterval": 1,
-        "startDate": "2024-01-01",
-        "estimatedHours": 2.0,
-        "assignedTo": "user-456",
+        "recurrence_type": TaskRecurrenceType.WEEKLY,
+        "recurrence_interval": 1,
+        "start_date": "2024-01-01",
+        "estimated_hours": 2.0,
+        "assigned_to": "user-456",
         "tags": ["reporting", "weekly"],
     }
 
