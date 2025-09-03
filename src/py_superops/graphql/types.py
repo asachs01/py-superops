@@ -1220,6 +1220,7 @@ class TaskRecurrenceInput:
     recurrence_end_date: Optional[datetime] = None
     recurrence_count: Optional[int] = None  # end after N occurrences
 
+
 # Utility Functions
 def convert_datetime_to_iso(dt: Optional[datetime]) -> Optional[str]:
     """Convert datetime to ISO string."""
