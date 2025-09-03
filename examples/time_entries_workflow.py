@@ -34,7 +34,9 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-async def demonstrate_timer_functionality(client: SuperOpsClient, user_id: str, ticket_id: str) -> dict:
+async def demonstrate_timer_functionality(
+    client: SuperOpsClient, user_id: str, ticket_id: str
+) -> dict:
     """Demonstrate timer start/stop/pause/resume functionality."""
     logger.info("=== Timer Functionality Demo ===")
 
@@ -261,7 +263,7 @@ async def demonstrate_bulk_operations(client: SuperOpsClient, time_entry_ids: Li
     logger.info("=== Bulk Operations Demo ===")
 
     try:
-        # Bulk update status  
+        # Bulk update status
         logger.info("Performing bulk status update...")
         updated_entries = await client.time_entries.bulk_update_billable_status(
             time_entry_ids, is_billable=True
