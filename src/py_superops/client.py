@@ -29,6 +29,7 @@ if TYPE_CHECKING:
         KnowledgeBaseManager,
         ProjectsManager,
         SiteManager,
+        TasksManager,
         TicketManager,
     )
 
@@ -81,6 +82,7 @@ class SuperOpsClient:
         # Initialize resource managers (lazy loading)
         self._clients_manager = None
         self._tickets_manager = None
+        self._tasks_manager = None
         self._assets_manager = None
         self._sites_manager = None
         self._contacts_manager = None
@@ -119,6 +121,15 @@ class SuperOpsClient:
 
             self._tickets_manager = TicketManager(self)
         return self._tickets_manager
+
+    @property
+    def tasks(self) -> "TasksManager":
+        """Get the tasks manager for task operations."""
+        if self._tasks_manager is None:
+            from .managers import TasksManager
+
+            self._tasks_manager = TasksManager(self)
+        return self._tasks_manager
 
     @property
     def assets(self) -> "AssetManager":

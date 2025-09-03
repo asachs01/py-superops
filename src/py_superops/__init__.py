@@ -107,6 +107,7 @@ try:
         ProjectsManager,
         ResourceManager,
         SiteManager,
+        TasksManager,
         TicketManager,
     )
 

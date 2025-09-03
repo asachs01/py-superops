@@ -8,7 +8,15 @@ import httpx
 import pytest
 
 from py_superops import AuthHandler, SuperOpsClient, SuperOpsConfig
-from py_superops.graphql.types import AssetStatus, ClientStatus, TicketPriority, TicketStatus
+from py_superops.graphql.types import (
+    AssetStatus,
+    ClientStatus,
+    TaskPriority,
+    TaskRecurrenceType,
+    TaskStatus,
+    TicketPriority,
+    TicketStatus,
+)
 
 # Test configuration fixtures
 
@@ -261,6 +269,56 @@ def sample_kb_article_data() -> Dict[str, Any]:
         "is_published": True,
         "tags": ["password", "reset", "authentication"],
         "author": "support@company.com",
+    }
+
+
+@pytest.fixture
+def sample_task_data() -> Dict[str, Any]:
+    """Sample task data for testing."""
+    return {
+        "title": "Sample Task",
+        "description": "This is a sample task for testing",
+        "project_id": "project-123",
+        "assigned_to": "user-456",
+        "priority": TaskPriority.NORMAL,
+        "status": TaskStatus.NEW,
+        "due_date": "2024-12-31",
+        "estimated_hours": 8.0,
+        "tags": ["test", "sample"],
+        "custom_fields": {"environment": "development"},
+        "is_billable": True,
+    }
+
+
+@pytest.fixture
+def sample_task_template_data() -> Dict[str, Any]:
+    """Sample task template data for testing."""
+    return {
+        "name": "Bug Fix Template",
+        "description": "Standard template for bug fix tasks",
+        "task_defaults": {
+            "priority": TaskPriority.HIGH,
+            "estimated_hours": 4.0,
+            "tags": ["bug", "fix"],
+            "is_billable": True,
+        },
+        "is_active": True,
+    }
+
+
+@pytest.fixture
+def sample_recurring_task_data() -> Dict[str, Any]:
+    """Sample recurring task data for testing."""
+    return {
+        "title": "Weekly Status Report",
+        "description": "Generate and send weekly status report",
+        "priority": TaskPriority.NORMAL,
+        "recurrence_type": TaskRecurrenceType.WEEKLY,
+        "recurrence_interval": 1,
+        "start_date": "2024-01-01",
+        "estimated_hours": 2.0,
+        "assigned_to": "user-456",
+        "tags": ["reporting", "weekly"],
     }
 
 

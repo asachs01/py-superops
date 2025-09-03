@@ -42,6 +42,7 @@ Example:
 Available Managers:
     - ClientManager: Client/customer management and workflows
     - TicketManager: Ticket lifecycle and workflow operations
+    - TasksManager: Task management with project linking and time tracking
     - AssetManager: Asset tracking and warranty management
     - SiteManager: Site/location management
     - ContactManager: Contact organization and management
@@ -60,6 +61,7 @@ from .knowledge_base import (
 )
 from .projects import ProjectsManager
 from .sites import SiteManager
+from .tasks import TasksManager
 from .tickets import TicketManager
 
 __all__ = [
@@ -68,6 +70,7 @@ __all__ = [
     # Domain-specific managers
     "ClientManager",
     "TicketManager",
+    "TasksManager",
     "AssetManager",
     "SiteManager",
     "ContactManager",
@@ -81,6 +84,7 @@ __all__ = [
 MANAGER_REGISTRY = {
     "clients": ClientManager,
     "tickets": TicketManager,
+    "tasks": TasksManager,
     "assets": AssetManager,
     "sites": SiteManager,
     "contacts": ContactManager,

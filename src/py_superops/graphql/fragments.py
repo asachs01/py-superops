@@ -258,6 +258,123 @@ TICKET_COMMENT_FIELDS = GraphQLFragment(
     dependencies={"BaseFields"},
 )
 
+# Task fragments
+TASK_CORE_FIELDS = GraphQLFragment(
+    name="TaskCoreFields",
+    on_type="Task",
+    fields="""
+    ...BaseFields
+    title
+    description
+    status
+    priority
+    projectId
+    assignedTo
+    assignedToTeam
+    creatorId
+    parentTaskId
+    dueDate
+    startDate
+    """,
+    dependencies={"BaseFields"},
+)
+
+TASK_FULL_FIELDS = GraphQLFragment(
+    name="TaskFullFields",
+    on_type="Task",
+    fields="""
+    ...TaskCoreFields
+    subtaskCount
+    completedAt
+    estimatedHours
+    actualHours
+    recurrenceType
+    recurrenceInterval
+    recurrenceEndDate
+    parentRecurringTaskId
+    timeEntriesCount
+    totalTimeLogged
+    billableTime
+    labels
+    tags
+    customFields
+    progressPercentage
+    isMilestone
+    isTemplate
+    templateId
+    attachmentCount
+    commentCount
+    overdueAlertSent
+    reminderSent
+    """,
+    dependencies={"TaskCoreFields"},
+)
+
+TASK_SUMMARY_FIELDS = GraphQLFragment(
+    name="TaskSummaryFields",
+    on_type="Task",
+    fields="""
+    id
+    title
+    status
+    priority
+    assignedTo
+    dueDate
+    progressPercentage
+    createdAt
+    updatedAt
+    """,
+)
+
+TASK_COMMENT_FIELDS = GraphQLFragment(
+    name="TaskCommentFields",
+    on_type="TaskComment",
+    fields="""
+    ...BaseFields
+    taskId
+    authorId
+    authorName
+    content
+    isInternal
+    timeLogged
+    """,
+    dependencies={"BaseFields"},
+)
+
+TASK_TIME_ENTRY_FIELDS = GraphQLFragment(
+    name="TaskTimeEntryFields",
+    on_type="TaskTimeEntry",
+    fields="""
+    ...BaseFields
+    taskId
+    userId
+    userName
+    hours
+    description
+    dateLogged
+    isBillable
+    hourlyRate
+    """,
+    dependencies={"BaseFields"},
+)
+
+TASK_TEMPLATE_FIELDS = GraphQLFragment(
+    name="TaskTemplateFields",
+    on_type="TaskTemplate",
+    fields="""
+    ...BaseFields
+    name
+    description
+    defaultPriority
+    estimatedHours
+    defaultAssigneeId
+    defaultTags
+    defaultCustomFields
+    checklistItems
+    """,
+    dependencies={"BaseFields"},
+)
+
 # Knowledge Base fragments
 KB_COLLECTION_CORE_FIELDS = GraphQLFragment(
     name="KBCollectionCoreFields",
@@ -481,6 +598,12 @@ ALL_FRAGMENTS = {
         PROJECT_TASK_CORE_FIELDS,
         PROJECT_TASK_FULL_FIELDS,
         PROJECT_TIME_ENTRY_FIELDS,
+        TASK_CORE_FIELDS,
+        TASK_FULL_FIELDS,
+        TASK_SUMMARY_FIELDS,
+        TASK_COMMENT_FIELDS,
+        TASK_TIME_ENTRY_FIELDS,
+        TASK_TEMPLATE_FIELDS,
         KB_COLLECTION_CORE_FIELDS,
         KB_COLLECTION_FULL_FIELDS,
         KB_ARTICLE_CORE_FIELDS,
@@ -526,6 +649,15 @@ PROJECT_FRAGMENTS = {
     "task_core": PROJECT_TASK_CORE_FIELDS,
     "task_full": PROJECT_TASK_FULL_FIELDS,
     "time_entry": PROJECT_TIME_ENTRY_FIELDS,
+}
+
+TASK_FRAGMENTS = {
+    "core": TASK_CORE_FIELDS,
+    "full": TASK_FULL_FIELDS,
+    "summary": TASK_SUMMARY_FIELDS,
+    "comment": TASK_COMMENT_FIELDS,
+    "time_entry": TASK_TIME_ENTRY_FIELDS,
+    "template": TASK_TEMPLATE_FIELDS,
 }
 
 KB_FRAGMENTS = {
@@ -722,6 +854,43 @@ def get_project_fields(
 
     if include_time_entries:
         fragments.add("ProjectTimeEntryFields")
+
+    return fragments
+
+
+def get_task_fields(
+    detail_level: str = "core",
+    include_comments: bool = False,
+    include_time_entries: bool = False,
+    include_template: bool = False,
+) -> Set[str]:
+    """Get task fragment names for specified detail level.
+
+    Args:
+        detail_level: Level of detail (summary, core, full)
+        include_comments: Whether to include comment fields
+        include_time_entries: Whether to include time entry fields
+        include_template: Whether to include template fields
+
+    Returns:
+        Set of fragment names
+    """
+    mapping = {
+        "summary": {"TaskSummaryFields"},
+        "core": {"TaskCoreFields"},
+        "full": {"TaskFullFields"},
+    }
+
+    fragments = mapping.get(detail_level, {"TaskCoreFields"})
+
+    if include_comments:
+        fragments.add("TaskCommentFields")
+
+    if include_time_entries:
+        fragments.add("TaskTimeEntryFields")
+
+    if include_template:
+        fragments.add("TaskTemplateFields")
 
     return fragments
 
