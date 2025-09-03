@@ -166,6 +166,35 @@ class SLALevel(str, Enum):
     CUSTOM = "CUSTOM"
 
 
+class AttachmentType(str, Enum):
+    """Attachment type enumeration."""
+
+    DOCUMENT = "DOCUMENT"
+    IMAGE = "IMAGE"
+    VIDEO = "VIDEO"
+    AUDIO = "AUDIO"
+    ARCHIVE = "ARCHIVE"
+    SPREADSHEET = "SPREADSHEET"
+    PRESENTATION = "PRESENTATION"
+    CODE = "CODE"
+    OTHER = "OTHER"
+
+
+class EntityType(str, Enum):
+    """Entity type enumeration for attachments and comments."""
+
+    TICKET = "TICKET"
+    TASK = "TASK"
+    PROJECT = "PROJECT"
+    CLIENT = "CLIENT"
+    ASSET = "ASSET"
+    CONTRACT = "CONTRACT"
+    SITE = "SITE"
+    CONTACT = "CONTACT"
+    KB_ARTICLE = "KB_ARTICLE"
+    KB_COLLECTION = "KB_COLLECTION"
+
+
 # Base Models
 @dataclass
 class BaseModel:
@@ -335,8 +364,8 @@ class ProjectTask(BaseModel):
     """Project task model."""
 
     project_id: str
-    milestone_id: Optional[str] = None
     name: str
+    milestone_id: Optional[str] = None
     description: Optional[str] = None
     status: TicketStatus = TicketStatus.OPEN
     priority: TicketPriority = TicketPriority.NORMAL
@@ -357,14 +386,14 @@ class ProjectTimeEntry(BaseModel):
     """Project time entry model."""
 
     project_id: str
-    task_id: Optional[str] = None
     user_id: str
     user_name: str
     description: str
     hours: float
+    start_time: datetime
+    task_id: Optional[str] = None
     billable_hours: Optional[float] = None
     rate: Optional[float] = None
-    start_time: datetime
     end_time: Optional[datetime] = None
     is_billable: bool = True
     notes: Optional[str] = None
@@ -482,6 +511,29 @@ class TaskTimeEntry(BaseModel):
     description: Optional[str] = None
     is_billable: bool = True
     hourly_rate: Optional[float] = None
+
+
+# Attachment Types
+@dataclass
+class Attachment(BaseModel):
+    """Attachment model."""
+
+    filename: str
+    original_filename: str
+    file_size: int
+    mime_type: str
+    entity_type: EntityType
+    entity_id: str
+    attachment_type: Optional[AttachmentType] = None
+    description: Optional[str] = None
+    url: Optional[str] = None
+    download_url: Optional[str] = None
+    version: int = 1
+    uploaded_by: Optional[str] = None
+    uploaded_by_name: Optional[str] = None
+    is_public: bool = False
+    checksum: Optional[str] = None
+    metadata: Dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -704,6 +756,24 @@ class ContractFilter:
     created_before: Optional[datetime] = None
 
 
+@dataclass
+class AttachmentFilter:
+    """Attachment query filter."""
+
+    filename: Optional[str] = None
+    mime_type: Optional[str] = None
+    attachment_type: Optional[AttachmentType] = None
+    entity_type: Optional[EntityType] = None
+    entity_id: Optional[str] = None
+    uploaded_by: Optional[str] = None
+    is_public: Optional[bool] = None
+    file_size_min: Optional[int] = None
+    file_size_max: Optional[int] = None
+    version: Optional[int] = None
+    created_after: Optional[datetime] = None
+    created_before: Optional[datetime] = None
+
+
 # Pagination Types
 @dataclass
 class PaginationArgs:
@@ -881,6 +951,13 @@ class ContractRatesResponse(PaginatedResponse):
     """Contract rates query response."""
 
     items: List[ContractRate]
+
+
+@dataclass
+class AttachmentsResponse(PaginatedResponse):
+    """Attachments query response."""
+
+    items: List[Attachment]
 
 
 # Mutation Input Types
@@ -1083,8 +1160,8 @@ class ProjectTaskInput:
     """Project task creation/update input."""
 
     project_id: str
-    milestone_id: Optional[str] = None
     name: str
+    milestone_id: Optional[str] = None
     description: Optional[str] = None
     status: Optional[TicketStatus] = None
     priority: Optional[TicketPriority] = None
@@ -1104,13 +1181,13 @@ class ProjectTimeEntryInput:
     """Project time entry creation/update input."""
 
     project_id: str
-    task_id: Optional[str] = None
     user_id: str
     description: str
     hours: float
+    start_time: datetime
+    task_id: Optional[str] = None
     billable_hours: Optional[float] = None
     rate: Optional[float] = None
-    start_time: datetime
     end_time: Optional[datetime] = None
     is_billable: Optional[bool] = None
     notes: Optional[str] = None
@@ -1219,6 +1296,49 @@ class TaskRecurrenceInput:
     recurrence_interval: Optional[int] = None
     recurrence_end_date: Optional[datetime] = None
     recurrence_count: Optional[int] = None  # end after N occurrences
+
+
+@dataclass
+class AttachmentInput:
+    """Attachment creation/update input."""
+
+    filename: str
+    entity_type: EntityType
+    entity_id: str
+    description: Optional[str] = None
+    attachment_type: Optional[AttachmentType] = None
+    is_public: Optional[bool] = None
+    metadata: Optional[Dict[str, Any]] = None
+
+
+@dataclass
+class AttachmentUploadInput:
+    """Attachment upload input with file data."""
+
+    filename: str
+    original_filename: str
+    entity_type: EntityType
+    entity_id: str
+    file_size: int
+    mime_type: str
+    description: Optional[str] = None
+    attachment_type: Optional[AttachmentType] = None
+    is_public: Optional[bool] = None
+    checksum: Optional[str] = None
+    metadata: Optional[Dict[str, Any]] = None
+
+
+@dataclass
+class AttachmentVersionInput:
+    """Attachment version creation input."""
+
+    attachment_id: str
+    filename: str
+    original_filename: str
+    file_size: int
+    mime_type: str
+    description: Optional[str] = None
+    checksum: Optional[str] = None
 
 
 # Utility Functions

@@ -663,6 +663,56 @@ CONTRACT_RATE_FIELDS = GraphQLFragment(
     dependencies={"BaseFields"},
 )
 
+# Attachment fragments
+ATTACHMENT_CORE_FIELDS = GraphQLFragment(
+    name="AttachmentCoreFields",
+    on_type="Attachment",
+    fields="""
+    ...BaseFields
+    filename
+    originalFilename
+    fileSize
+    mimeType
+    entityType
+    entityId
+    attachmentType
+    version
+    uploadedBy
+    uploadedByName
+    isPublic
+    """,
+    dependencies={"BaseFields"},
+)
+
+ATTACHMENT_FULL_FIELDS = GraphQLFragment(
+    name="AttachmentFullFields",
+    on_type="Attachment",
+    fields="""
+    ...AttachmentCoreFields
+    description
+    url
+    downloadUrl
+    checksum
+    metadata
+    """,
+    dependencies={"AttachmentCoreFields"},
+)
+
+ATTACHMENT_SUMMARY_FIELDS = GraphQLFragment(
+    name="AttachmentSummaryFields",
+    on_type="Attachment",
+    fields="""
+    id
+    filename
+    fileSize
+    mimeType
+    attachmentType
+    version
+    uploadedByName
+    createdAt
+    """,
+)
+
 
 # Fragment collections for easy access
 ALL_FRAGMENTS = {
@@ -707,6 +757,9 @@ ALL_FRAGMENTS = {
         CONTRACT_SUMMARY_FIELDS,
         CONTRACT_SLA_FIELDS,
         CONTRACT_RATE_FIELDS,
+        ATTACHMENT_CORE_FIELDS,
+        ATTACHMENT_FULL_FIELDS,
+        ATTACHMENT_SUMMARY_FIELDS,
     ]
 }
 
@@ -772,6 +825,12 @@ CONTRACT_FRAGMENTS = {
     "summary": CONTRACT_SUMMARY_FIELDS,
     "sla": CONTRACT_SLA_FIELDS,
     "rate": CONTRACT_RATE_FIELDS,
+}
+
+ATTACHMENT_FRAGMENTS = {
+    "core": ATTACHMENT_CORE_FIELDS,
+    "full": ATTACHMENT_FULL_FIELDS,
+    "summary": ATTACHMENT_SUMMARY_FIELDS,
 }
 
 
@@ -1061,3 +1120,20 @@ def get_contract_fields(
         fragments.add("ContractRateFields")
 
     return fragments
+
+
+def get_attachment_fields(detail_level: str = "core") -> Set[str]:
+    """Get attachment fragment names for specified detail level.
+
+    Args:
+        detail_level: Level of detail (summary, core, full)
+
+    Returns:
+        Set of fragment names
+    """
+    mapping = {
+        "summary": {"AttachmentSummaryFields"},
+        "core": {"AttachmentCoreFields"},
+        "full": {"AttachmentFullFields"},
+    }
+    return mapping.get(detail_level, {"AttachmentCoreFields"})

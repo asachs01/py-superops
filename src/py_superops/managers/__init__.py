@@ -52,6 +52,7 @@ Available Managers:
 """
 
 from .assets import AssetManager
+from .attachments import AttachmentsManager
 from .base import ResourceManager
 from .clients import ClientManager
 from .contacts import ContactManager
@@ -74,6 +75,7 @@ __all__ = [
     "TicketManager",
     "TasksManager",
     "AssetManager",
+    "AttachmentsManager",
     "SiteManager",
     "ContactManager",
     "ContractsManager",
@@ -89,6 +91,7 @@ MANAGER_REGISTRY = {
     "tickets": TicketManager,
     "tasks": TasksManager,
     "assets": AssetManager,
+    "attachments": AttachmentsManager,
     "sites": SiteManager,
     "contacts": ContactManager,
     "contracts": ContractsManager,
