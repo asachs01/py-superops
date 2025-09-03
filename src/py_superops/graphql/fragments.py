@@ -377,6 +377,64 @@ TASK_TEMPLATE_FIELDS = GraphQLFragment(
     dependencies={"BaseFields"},
 )
 
+# Comment fragments
+COMMENT_CORE_FIELDS = GraphQLFragment(
+    name="CommentCoreFields",
+    on_type="Comment",
+    fields="""
+    ...BaseFields
+    entityType
+    entityId
+    authorId
+    authorName
+    content
+    commentType
+    isInternal
+    timeLogged
+    """,
+    dependencies={"BaseFields"},
+)
+
+COMMENT_FULL_FIELDS = GraphQLFragment(
+    name="CommentFullFields",
+    on_type="Comment",
+    fields="""
+    ...CommentCoreFields
+    parentCommentId
+    replyCount
+    attachments
+    """,
+    dependencies={"CommentCoreFields"},
+)
+
+COMMENT_SUMMARY_FIELDS = GraphQLFragment(
+    name="CommentSummaryFields",
+    on_type="Comment",
+    fields="""
+    id
+    authorName
+    content
+    commentType
+    isInternal
+    createdAt
+    replyCount
+    """,
+)
+
+COMMENT_ATTACHMENT_FIELDS = GraphQLFragment(
+    name="CommentAttachmentFields",
+    on_type="CommentAttachment",
+    fields="""
+    ...BaseFields
+    commentId
+    filename
+    fileUrl
+    fileSize
+    mimeType
+    """,
+    dependencies={"BaseFields"},
+)
+
 # Knowledge Base fragments
 KB_COLLECTION_CORE_FIELDS = GraphQLFragment(
     name="KBCollectionCoreFields",
@@ -697,6 +755,10 @@ ALL_FRAGMENTS = {
         TASK_COMMENT_FIELDS,
         TASK_TIME_ENTRY_FIELDS,
         TASK_TEMPLATE_FIELDS,
+        COMMENT_CORE_FIELDS,
+        COMMENT_FULL_FIELDS,
+        COMMENT_SUMMARY_FIELDS,
+        COMMENT_ATTACHMENT_FIELDS,
         KB_COLLECTION_CORE_FIELDS,
         KB_COLLECTION_FULL_FIELDS,
         KB_ARTICLE_CORE_FIELDS,
@@ -772,6 +834,13 @@ CONTRACT_FRAGMENTS = {
     "summary": CONTRACT_SUMMARY_FIELDS,
     "sla": CONTRACT_SLA_FIELDS,
     "rate": CONTRACT_RATE_FIELDS,
+}
+
+COMMENT_FRAGMENTS = {
+    "core": COMMENT_CORE_FIELDS,
+    "full": COMMENT_FULL_FIELDS,
+    "summary": COMMENT_SUMMARY_FIELDS,
+    "attachment": COMMENT_ATTACHMENT_FIELDS,
 }
 
 
@@ -1059,5 +1128,29 @@ def get_contract_fields(
 
     if include_rates:
         fragments.add("ContractRateFields")
+
+    return fragments
+
+
+def get_comment_fields(detail_level: str = "core", include_attachments: bool = False) -> Set[str]:
+    """Get comment fragment names for specified detail level.
+
+    Args:
+        detail_level: Level of detail (summary, core, full)
+        include_attachments: Whether to include attachment fields
+
+    Returns:
+        Set of fragment names
+    """
+    mapping = {
+        "summary": {"CommentSummaryFields"},
+        "core": {"CommentCoreFields"},
+        "full": {"CommentFullFields"},
+    }
+
+    fragments = mapping.get(detail_level, {"CommentCoreFields"})
+
+    if include_attachments:
+        fragments.add("CommentAttachmentFields")
 
     return fragments
