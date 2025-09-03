@@ -53,6 +53,8 @@ from .builder import (  # Base builders; Specific builders; Factory functions
     SelectionQueryBuilder,
     TicketMutationBuilder,
     TicketQueryBuilder,
+    UserMutationBuilder,
+    UserQueryBuilder,
     create_asset_query_builder,
     create_client_mutation_builder,
     create_client_query_builder,
@@ -60,6 +62,8 @@ from .builder import (  # Base builders; Specific builders; Factory functions
     create_project_query_builder,
     create_ticket_mutation_builder,
     create_ticket_query_builder,
+    create_user_mutation_builder,
+    create_user_query_builder,
 )
 
 # GraphQL fragments
@@ -106,6 +110,10 @@ from .fragments import (  # Individual fragments; Fragment collections; Utility 
     TICKET_FRAGMENTS,
     TICKET_FULL_FIELDS,
     TICKET_SUMMARY_FIELDS,
+    USER_CORE_FIELDS,
+    USER_FRAGMENTS,
+    USER_FULL_FIELDS,
+    USER_SUMMARY_FIELDS,
     build_fragments_string,
     create_query_with_fragments,
     get_asset_fields,
@@ -115,6 +123,7 @@ from .fragments import (  # Individual fragments; Fragment collections; Utility 
     get_kb_fields,
     get_project_fields,
     get_ticket_fields,
+    get_user_fields,
     resolve_dependencies,
 )
 
@@ -181,6 +190,12 @@ from .types import (  # Base types; Enums; Models; Filters; Input types for muta
     TicketPriority,
     TicketsResponse,
     TicketStatus,
+    User,
+    UserFilter,
+    UserInput,
+    UserRole,
+    UsersResponse,
+    UserStatus,
     convert_datetime_to_iso,
     convert_iso_to_datetime,
     serialize_filter_value,

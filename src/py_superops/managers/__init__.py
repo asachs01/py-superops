@@ -49,6 +49,7 @@ Available Managers:
     - KnowledgeBaseManager: Knowledge base articles and collections
     - ProjectsManager: Project management and tracking
     - ContractsManager: Contract lifecycle and management operations
+    - UsersManager: User management and role assignment operations
 """
 
 from .assets import AssetManager
@@ -65,6 +66,7 @@ from .projects import ProjectsManager
 from .sites import SiteManager
 from .tasks import TasksManager
 from .tickets import TicketManager
+from .users import UsersManager
 
 __all__ = [
     # Base manager
@@ -81,6 +83,7 @@ __all__ = [
     "KnowledgeBaseArticleManager",
     "KnowledgeBaseCollectionManager",
     "ProjectsManager",
+    "UsersManager",
 ]
 
 # Manager registry for dynamic access
@@ -94,6 +97,7 @@ MANAGER_REGISTRY = {
     "contracts": ContractsManager,
     "knowledge_base": KnowledgeBaseManager,
     "projects": ProjectsManager,
+    "users": UsersManager,
 }
 
 
