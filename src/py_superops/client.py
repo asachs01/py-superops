@@ -27,6 +27,7 @@ if TYPE_CHECKING:
         ClientManager,
         ContactManager,
         KnowledgeBaseManager,
+        ProjectsManager,
         SiteManager,
         TicketManager,
     )
@@ -84,6 +85,7 @@ class SuperOpsClient:
         self._sites_manager = None
         self._contacts_manager = None
         self._knowledge_base_manager = None
+        self._projects_manager = None
 
         # Setup logging
         logging.basicConfig(level=getattr(logging, config.log_level), format=config.log_format)
@@ -153,6 +155,15 @@ class SuperOpsClient:
 
             self._knowledge_base_manager = KnowledgeBaseManager(self)
         return self._knowledge_base_manager
+
+    @property
+    def projects(self) -> "ProjectsManager":
+        """Get the projects manager for project operations."""
+        if self._projects_manager is None:
+            from .managers import ProjectsManager
+
+            self._projects_manager = ProjectsManager(self)
+        return self._projects_manager
 
     async def __aenter__(self) -> "SuperOpsClient":
         """Async context manager entry."""

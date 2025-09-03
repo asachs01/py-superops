@@ -10,27 +10,25 @@ field selection, filtering, and pagination support.
 
 from __future__ import annotations
 
-from datetime import datetime
-from typing import Any, Dict, List, Optional, Set, Type, Union
+from typing import Any, Dict, List, Optional, Set
 
 from .fragments import (
-    ALL_FRAGMENTS,
     build_fragments_string,
     get_asset_fields,
     get_client_fields,
-    get_kb_fields,
+    get_project_fields,
     get_ticket_fields,
 )
 from .types import (
     AssetFilter,
-    AssetInput,
     ClientFilter,
     ClientInput,
-    ContactInput,
-    KnowledgeBaseArticleInput,
-    KnowledgeBaseCollectionInput,
     PaginationArgs,
-    SiteInput,
+    ProjectFilter,
+    ProjectInput,
+    ProjectMilestoneInput,
+    ProjectTaskInput,
+    ProjectTimeEntryInput,
     SortArgs,
     TicketFilter,
     TicketInput,
@@ -643,6 +641,213 @@ class AssetQueryBuilder(SelectionQueryBuilder):
         return self.build("asset", "id: $id")
 
 
+class ProjectQueryBuilder(SelectionQueryBuilder):
+    """Builder for project-related queries."""
+
+    def __init__(
+        self,
+        detail_level: str = "core",
+        include_milestones: bool = False,
+        include_tasks: bool = False,
+        include_time_entries: bool = False,
+        task_detail: str = "core",
+    ):
+        """Initialize project query builder.
+
+        Args:
+            detail_level: Level of detail (summary, core, full)
+            include_milestones: Whether to include milestone fields
+            include_tasks: Whether to include task fields
+            include_time_entries: Whether to include time entry fields
+            task_detail: Level of detail for tasks (core, full)
+        """
+        super().__init__()
+        self.detail_level = detail_level
+        self.include_milestones = include_milestones
+        self.include_tasks = include_tasks
+        self.include_time_entries = include_time_entries
+        self.task_detail = task_detail
+
+        project_fragments = get_project_fields(
+            detail_level=detail_level,
+            include_milestones=include_milestones,
+            include_tasks=include_tasks,
+            include_time_entries=include_time_entries,
+            task_detail=task_detail,
+        )
+        self.add_fragments(project_fragments)
+
+    def list_projects(
+        self,
+        filter_obj: Optional[ProjectFilter] = None,
+        pagination: Optional[PaginationArgs] = None,
+        sort: Optional[SortArgs] = None,
+    ) -> ProjectQueryBuilder:
+        """Build a list projects query.
+
+        Args:
+            filter_obj: Project filter
+            pagination: Pagination arguments
+            sort: Sort arguments
+
+        Returns:
+            Self for chaining
+        """
+        # Build arguments
+        args = []
+
+        if filter_obj:
+            self.add_variable("filter", "ProjectFilter", serialize_input(filter_obj))
+            args.append("filter: $filter")
+
+        if pagination:
+            self.add_variable("page", "Int", pagination.page)
+            self.add_variable("pageSize", "Int", pagination.pageSize)
+            args.append("page: $page, pageSize: $pageSize")
+
+        if sort:
+            self.add_variable("sortField", "String", sort.field)
+            self.add_variable("sortDirection", "SortDirection", sort.direction)
+            args.append("sortField: $sortField, sortDirection: $sortDirection")
+
+        # Add selections
+        project_fragments = get_project_fields(
+            detail_level=self.detail_level,
+            include_milestones=self.include_milestones,
+            include_tasks=self.include_tasks,
+            include_time_entries=self.include_time_entries,
+            task_detail=self.task_detail,
+        )
+
+        # Get main project fragment
+        main_fragment = None
+        for fragment in project_fragments:
+            if (
+                "ProjectSummaryFields" in fragment
+                or "ProjectCoreFields" in fragment
+                or "ProjectFullFields" in fragment
+            ):
+                main_fragment = fragment
+                break
+
+        if not main_fragment:
+            main_fragment = "ProjectCoreFields"
+
+        items_selection = f"""items {{
+  ...{main_fragment}"""
+
+        # Add nested selections for milestones, tasks, etc.
+        if self.include_milestones:
+            items_selection += """
+  milestones {
+    ...ProjectMilestoneFields
+  }"""
+
+        if self.include_tasks:
+            task_fragment = (
+                "ProjectTaskCoreFields" if self.task_detail == "core" else "ProjectTaskFullFields"
+            )
+            items_selection += f"""
+  tasks {{
+    ...{task_fragment}
+  }}"""
+
+        if self.include_time_entries:
+            items_selection += """
+  timeEntries {
+    ...ProjectTimeEntryFields
+  }"""
+
+        items_selection += "\n}"
+
+        return (
+            self.add_selection(items_selection)
+            .add_selection(
+                """pagination {
+  ...PaginationInfo
+}"""
+            )
+            .add_fragment("PaginationInfo")
+        )
+
+    def get_project(self, project_id: str) -> ProjectQueryBuilder:
+        """Build a get project by ID query.
+
+        Args:
+            project_id: Project ID
+
+        Returns:
+            Self for chaining
+        """
+        self.add_variable("id", "ID!", project_id)
+
+        project_fragments = get_project_fields(
+            detail_level=self.detail_level,
+            include_milestones=self.include_milestones,
+            include_tasks=self.include_tasks,
+            include_time_entries=self.include_time_entries,
+            task_detail=self.task_detail,
+        )
+
+        # Get main project fragment
+        main_fragment = None
+        for fragment in project_fragments:
+            if (
+                "ProjectSummaryFields" in fragment
+                or "ProjectCoreFields" in fragment
+                or "ProjectFullFields" in fragment
+            ):
+                main_fragment = fragment
+                break
+
+        if not main_fragment:
+            main_fragment = "ProjectCoreFields"
+
+        selection = f"...{main_fragment}"
+
+        # Add nested selections
+        if self.include_milestones:
+            selection += """
+milestones {
+  ...ProjectMilestoneFields
+}"""
+
+        if self.include_tasks:
+            task_fragment = (
+                "ProjectTaskCoreFields" if self.task_detail == "core" else "ProjectTaskFullFields"
+            )
+            selection += f"""
+tasks {{
+  ...{task_fragment}
+}}"""
+
+        if self.include_time_entries:
+            selection += """
+timeEntries {
+  ...ProjectTimeEntryFields
+}"""
+
+        return self.add_selection(selection)
+
+    def build_list(
+        self,
+        filter_obj: Optional[ProjectFilter] = None,
+        pagination: Optional[PaginationArgs] = None,
+        sort: Optional[SortArgs] = None,
+    ) -> str:
+        """Build list projects query string."""
+        self.list_projects(filter_obj, pagination, sort)
+        args = ", ".join(
+            f"{k}: ${k}" for k in self._variable_definitions.keys() if k in self._variables
+        )
+        return self.build("projects", args)
+
+    def build_get(self, project_id: str) -> str:
+        """Build get project query string."""
+        self.get_project(project_id)
+        return self.build("project", "id: $id")
+
+
 class ClientMutationBuilder(MutationBuilder):
     """Builder for client mutations."""
 
@@ -736,6 +941,118 @@ class TicketMutationBuilder(MutationBuilder):
         return self.mutation_field("deleteTicket", "id: $id").build()
 
 
+class ProjectMutationBuilder(MutationBuilder):
+    """Builder for project mutations."""
+
+    def __init__(self, detail_level: str = "core"):
+        """Initialize project mutation builder.
+
+        Args:
+            detail_level: Level of detail for returned fields
+        """
+        super().__init__()
+        self.detail_level = detail_level
+
+        project_fragments = get_project_fields(detail_level)
+        self.add_fragments(project_fragments)
+
+        # Set return fields based on fragment
+        main_fragment = None
+        for fragment in project_fragments:
+            if (
+                "ProjectSummaryFields" in fragment
+                or "ProjectCoreFields" in fragment
+                or "ProjectFullFields" in fragment
+            ):
+                main_fragment = fragment
+                break
+
+        if not main_fragment:
+            main_fragment = "ProjectCoreFields"
+
+        self._return_fields = [f"...{main_fragment}"]
+
+    def create_project(self, input_data: ProjectInput) -> str:
+        """Build create project mutation."""
+        self.add_variable("input", "ProjectInput!", serialize_input(input_data))
+        return self.mutation_field("createProject", "input: $input").build()
+
+    def update_project(self, project_id: str, input_data: ProjectInput) -> str:
+        """Build update project mutation."""
+        self.add_variable("id", "ID!", project_id)
+        self.add_variable("input", "ProjectInput!", serialize_input(input_data))
+        return self.mutation_field("updateProject", "id: $id, input: $input").build()
+
+    def delete_project(self, project_id: str) -> str:
+        """Build delete project mutation."""
+        self.add_variable("id", "ID!", project_id)
+        self._return_fields = ["success", "message"]
+        return self.mutation_field("deleteProject", "id: $id").build()
+
+    def create_milestone(self, input_data: ProjectMilestoneInput) -> str:
+        """Build create project milestone mutation."""
+        self.add_variable("input", "ProjectMilestoneInput!", serialize_input(input_data))
+        self._return_fields = ["...ProjectMilestoneFields"]
+        self.add_fragment("ProjectMilestoneFields")
+        return self.mutation_field("createProjectMilestone", "input: $input").build()
+
+    def update_milestone(self, milestone_id: str, input_data: ProjectMilestoneInput) -> str:
+        """Build update project milestone mutation."""
+        self.add_variable("id", "ID!", milestone_id)
+        self.add_variable("input", "ProjectMilestoneInput!", serialize_input(input_data))
+        self._return_fields = ["...ProjectMilestoneFields"]
+        self.add_fragment("ProjectMilestoneFields")
+        return self.mutation_field("updateProjectMilestone", "id: $id, input: $input").build()
+
+    def delete_milestone(self, milestone_id: str) -> str:
+        """Build delete project milestone mutation."""
+        self.add_variable("id", "ID!", milestone_id)
+        self._return_fields = ["success", "message"]
+        return self.mutation_field("deleteProjectMilestone", "id: $id").build()
+
+    def create_task(self, input_data: ProjectTaskInput) -> str:
+        """Build create project task mutation."""
+        self.add_variable("input", "ProjectTaskInput!", serialize_input(input_data))
+        self._return_fields = ["...ProjectTaskFullFields"]
+        self.add_fragment("ProjectTaskFullFields")
+        return self.mutation_field("createProjectTask", "input: $input").build()
+
+    def update_task(self, task_id: str, input_data: ProjectTaskInput) -> str:
+        """Build update project task mutation."""
+        self.add_variable("id", "ID!", task_id)
+        self.add_variable("input", "ProjectTaskInput!", serialize_input(input_data))
+        self._return_fields = ["...ProjectTaskFullFields"]
+        self.add_fragment("ProjectTaskFullFields")
+        return self.mutation_field("updateProjectTask", "id: $id, input: $input").build()
+
+    def delete_task(self, task_id: str) -> str:
+        """Build delete project task mutation."""
+        self.add_variable("id", "ID!", task_id)
+        self._return_fields = ["success", "message"]
+        return self.mutation_field("deleteProjectTask", "id: $id").build()
+
+    def create_time_entry(self, input_data: ProjectTimeEntryInput) -> str:
+        """Build create project time entry mutation."""
+        self.add_variable("input", "ProjectTimeEntryInput!", serialize_input(input_data))
+        self._return_fields = ["...ProjectTimeEntryFields"]
+        self.add_fragment("ProjectTimeEntryFields")
+        return self.mutation_field("createProjectTimeEntry", "input: $input").build()
+
+    def update_time_entry(self, time_entry_id: str, input_data: ProjectTimeEntryInput) -> str:
+        """Build update project time entry mutation."""
+        self.add_variable("id", "ID!", time_entry_id)
+        self.add_variable("input", "ProjectTimeEntryInput!", serialize_input(input_data))
+        self._return_fields = ["...ProjectTimeEntryFields"]
+        self.add_fragment("ProjectTimeEntryFields")
+        return self.mutation_field("updateProjectTimeEntry", "id: $id, input: $input").build()
+
+    def delete_time_entry(self, time_entry_id: str) -> str:
+        """Build delete project time entry mutation."""
+        self.add_variable("id", "ID!", time_entry_id)
+        self._return_fields = ["success", "message"]
+        return self.mutation_field("deleteProjectTimeEntry", "id: $id").build()
+
+
 # Factory functions for easy builder creation
 def create_client_query_builder(detail_level: str = "core") -> ClientQueryBuilder:
     """Create a client query builder.
@@ -776,6 +1093,34 @@ def create_asset_query_builder(detail_level: str = "core") -> AssetQueryBuilder:
     return AssetQueryBuilder(detail_level)
 
 
+def create_project_query_builder(
+    detail_level: str = "core",
+    include_milestones: bool = False,
+    include_tasks: bool = False,
+    include_time_entries: bool = False,
+    task_detail: str = "core",
+) -> ProjectQueryBuilder:
+    """Create a project query builder.
+
+    Args:
+        detail_level: Level of detail for projects (summary, core, full)
+        include_milestones: Whether to include milestone fields
+        include_tasks: Whether to include task fields
+        include_time_entries: Whether to include time entry fields
+        task_detail: Level of detail for tasks (core, full)
+
+    Returns:
+        ProjectQueryBuilder instance
+    """
+    return ProjectQueryBuilder(
+        detail_level=detail_level,
+        include_milestones=include_milestones,
+        include_tasks=include_tasks,
+        include_time_entries=include_time_entries,
+        task_detail=task_detail,
+    )
+
+
 def create_client_mutation_builder(detail_level: str = "core") -> ClientMutationBuilder:
     """Create a client mutation builder.
 
@@ -798,3 +1143,15 @@ def create_ticket_mutation_builder(detail_level: str = "core") -> TicketMutation
         TicketMutationBuilder instance
     """
     return TicketMutationBuilder(detail_level)
+
+
+def create_project_mutation_builder(detail_level: str = "core") -> ProjectMutationBuilder:
+    """Create a project mutation builder.
+
+    Args:
+        detail_level: Level of detail for returned fields
+
+    Returns:
+        ProjectMutationBuilder instance
+    """
+    return ProjectMutationBuilder(detail_level)

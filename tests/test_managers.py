@@ -1,9 +1,8 @@
 """Tests for resource managers."""
 
 from dataclasses import dataclass
-from datetime import datetime
 from typing import Any, Dict
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -12,12 +11,20 @@ from py_superops.exceptions import (
     SuperOpsResourceNotFoundError,
     SuperOpsValidationError,
 )
-from py_superops.graphql.types import AssetStatus, ClientStatus, TicketPriority, TicketStatus
+from py_superops.graphql.types import (
+    AssetStatus,
+    ClientStatus,
+    ProjectPriority,
+    ProjectStatus,
+    TicketPriority,
+    TicketStatus,
+)
 from py_superops.managers import (
     AssetManager,
     ClientManager,
     ContactManager,
     KnowledgeBaseManager,
+    ProjectsManager,
     SiteManager,
     TicketManager,
 )
@@ -790,3 +797,315 @@ class TestManagerPerformance:
         # Verify efficient batch retrieval
         assert len(result["items"]) == 100
         assert result["pagination"]["total"] == 100
+
+
+class TestProjectsManager:
+    """Test the ProjectsManager class."""
+
+    @pytest.fixture
+    def project_data(self):
+        """Sample project data for testing."""
+        return {
+            "id": "project-123",
+            "name": "Test Project",
+            "description": "A test project",
+            "status": ProjectStatus.OPEN.value,
+            "priority": ProjectPriority.NORMAL.value,
+            "client_id": "client-456",
+            "start_date": "2024-01-01",
+            "end_date": "2024-12-31",
+            "estimated_hours": 100.0,
+            "actual_hours": 25.5,
+            "budget": 10000.0,
+            "assigned_to": ["user-1", "user-2"],
+            "tags": ["web", "development"],
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z",
+        }
+
+    @pytest.fixture
+    def projects_response(self, project_data):
+        """Sample projects list response for testing."""
+        return {
+            "data": {
+                "projects": {
+                    "items": [project_data],
+                    "pagination": {
+                        "page": 1,
+                        "pageSize": 50,
+                        "total": 1,
+                        "hasNextPage": False,
+                        "hasPreviousPage": False,
+                    },
+                }
+            }
+        }
+
+    @pytest.mark.asyncio
+    async def test_get_project(self, client, project_data):
+        """Test getting a single project."""
+        client.execute_query.return_value = {"data": {"project": project_data}}
+
+        manager = ProjectsManager(client)
+        project = await manager.get("project-123")
+
+        assert project is not None
+        assert project.id == "project-123"
+        assert project.name == "Test Project"
+        assert project.status == ProjectStatus.OPEN
+
+    @pytest.mark.asyncio
+    async def test_list_projects(self, client, projects_response):
+        """Test listing projects."""
+        client.execute_query.return_value = projects_response
+
+        manager = ProjectsManager(client)
+        result = await manager.list(page=1, page_size=50)
+
+        assert len(result["items"]) == 1
+        assert result["items"][0].name == "Test Project"
+        assert result["pagination"]["total"] == 1
+
+    @pytest.mark.asyncio
+    async def test_create_project(self, client, project_data):
+        """Test creating a new project."""
+        client.execute_mutation.return_value = {"data": {"createProject": project_data}}
+
+        manager = ProjectsManager(client)
+        project = await manager.create(
+            {
+                "name": "Test Project",
+                "description": "A test project",
+                "client_id": "client-456",
+                "status": ProjectStatus.OPEN.value,
+            }
+        )
+
+        assert project is not None
+        assert project.name == "Test Project"
+        assert project.status == ProjectStatus.OPEN
+
+    @pytest.mark.asyncio
+    async def test_update_project(self, client, project_data):
+        """Test updating a project."""
+        updated_data = project_data.copy()
+        updated_data["name"] = "Updated Project"
+
+        client.execute_mutation.return_value = {"data": {"updateProject": updated_data}}
+
+        manager = ProjectsManager(client)
+        project = await manager.update("project-123", {"name": "Updated Project"})
+
+        assert project is not None
+        assert project.name == "Updated Project"
+
+    @pytest.mark.asyncio
+    async def test_delete_project(self, client):
+        """Test deleting a project."""
+        client.execute_mutation.return_value = {
+            "data": {"deleteProject": {"success": True, "message": "Project deleted"}}
+        }
+
+        manager = ProjectsManager(client)
+        result = await manager.delete("project-123")
+
+        assert result is True
+
+    @pytest.mark.asyncio
+    async def test_get_by_name(self, client, projects_response):
+        """Test getting project by name."""
+        client.execute_query.return_value = projects_response
+
+        manager = ProjectsManager(client)
+        project = await manager.get_by_name("Test Project")
+
+        assert project is not None
+        assert project.name == "Test Project"
+
+    @pytest.mark.asyncio
+    async def test_get_by_client(self, client, projects_response):
+        """Test getting projects by client."""
+        client.execute_query.return_value = projects_response
+
+        manager = ProjectsManager(client)
+        result = await manager.get_by_client("client-456")
+
+        assert len(result["items"]) == 1
+        assert result["items"][0].client_id == "client-456"
+
+    @pytest.mark.asyncio
+    async def test_get_active_projects(self, client, projects_response):
+        """Test getting active projects."""
+        client.execute_query.return_value = projects_response
+
+        manager = ProjectsManager(client)
+        result = await manager.get_active_projects()
+
+        assert len(result["items"]) == 1
+
+    @pytest.mark.asyncio
+    async def test_get_overdue_projects(self, client, project_data):
+        """Test getting overdue projects."""
+        overdue_data = project_data.copy()
+        overdue_data["end_date"] = "2023-12-31"  # Past date
+
+        client.execute_query.return_value = {
+            "data": {
+                "projects": {
+                    "items": [overdue_data],
+                    "pagination": {
+                        "page": 1,
+                        "pageSize": 50,
+                        "total": 1,
+                        "hasNextPage": False,
+                        "hasPreviousPage": False,
+                    },
+                }
+            }
+        }
+
+        manager = ProjectsManager(client)
+        result = await manager.get_overdue_projects()
+
+        assert len(result["items"]) == 1
+
+    @pytest.mark.asyncio
+    async def test_update_status(self, client, project_data):
+        """Test updating project status."""
+        updated_data = project_data.copy()
+        updated_data["status"] = ProjectStatus.IN_PROGRESS.value
+
+        client.execute_mutation.return_value = {"data": {"updateProject": updated_data}}
+
+        manager = ProjectsManager(client)
+        project = await manager.update_status("project-123", ProjectStatus.IN_PROGRESS)
+
+        assert project.status == ProjectStatus.IN_PROGRESS
+
+    @pytest.mark.asyncio
+    async def test_assign_to_user(self, client, project_data):
+        """Test assigning project to user."""
+        updated_data = project_data.copy()
+        updated_data["assigned_to"] = ["user-1", "user-2", "user-3"]
+
+        client.execute_query.return_value = {"data": {"project": project_data}}
+        client.execute_mutation.return_value = {"data": {"updateProject": updated_data}}
+
+        manager = ProjectsManager(client)
+        project = await manager.assign_to_user("project-123", "user-3")
+
+        assert "user-3" in project.assigned_to
+
+    @pytest.mark.asyncio
+    async def test_get_project_timeline(self, client):
+        """Test getting project timeline."""
+        timeline_data = {
+            "milestones": [
+                {
+                    "id": "milestone-1",
+                    "name": "Phase 1",
+                    "due_date": "2024-06-30",
+                    "status": "PENDING",
+                    "completion_percentage": 0.0,
+                }
+            ],
+            "tasks": [
+                {
+                    "id": "task-1",
+                    "title": "Setup Project",
+                    "status": "OPEN",
+                    "priority": "NORMAL",
+                    "estimated_hours": 8.0,
+                    "actual_hours": 0.0,
+                    "due_date": "2024-02-15",
+                }
+            ],
+        }
+
+        client.execute_query.return_value = {"data": {"projectTimeline": timeline_data}}
+
+        manager = ProjectsManager(client)
+        timeline = await manager.get_project_timeline("project-123")
+
+        assert len(timeline["milestones"]) == 1
+        assert len(timeline["tasks"]) == 1
+        assert timeline["milestones"][0]["name"] == "Phase 1"
+
+    @pytest.mark.asyncio
+    async def test_get_project_analytics(self, client):
+        """Test getting project analytics."""
+        analytics_data = {
+            "total_hours_logged": 25.5,
+            "total_hours_estimated": 100.0,
+            "completion_percentage": 25.5,
+            "budget_used": 2550.0,
+            "budget_remaining": 7450.0,
+            "milestones_completed": 0,
+            "milestones_total": 3,
+            "tasks_completed": 2,
+            "tasks_total": 12,
+        }
+
+        client.execute_query.return_value = {"data": {"projectAnalytics": analytics_data}}
+
+        manager = ProjectsManager(client)
+        analytics = await manager.get_project_analytics("project-123")
+
+        assert analytics["completion_percentage"] == 25.5
+        assert analytics["total_hours_logged"] == 25.5
+        assert analytics["tasks_completed"] == 2
+
+    @pytest.mark.asyncio
+    async def test_link_to_client(self, client, project_data):
+        """Test linking project to client."""
+        updated_data = project_data.copy()
+        updated_data["client_id"] = "client-789"
+
+        client.execute_mutation.return_value = {"data": {"updateProject": updated_data}}
+
+        manager = ProjectsManager(client)
+        project = await manager.link_to_client("project-123", "client-789")
+
+        assert project.client_id == "client-789"
+
+    @pytest.mark.asyncio
+    async def test_validation_errors(self, client):
+        """Test validation error handling."""
+        manager = ProjectsManager(client)
+
+        # Test empty ID
+        with pytest.raises(SuperOpsValidationError):
+            await manager.get("")
+
+        # Test invalid page number
+        with pytest.raises(SuperOpsValidationError):
+            await manager.list(page=0)
+
+        # Test empty project name in create
+        with pytest.raises(SuperOpsValidationError):
+            await manager.create({"name": ""})
+
+        # Test invalid status
+        with pytest.raises(SuperOpsValidationError):
+            await manager.create({"name": "Test", "status": "INVALID_STATUS"})
+
+    @pytest.mark.asyncio
+    async def test_search_projects(self, client, projects_response):
+        """Test searching projects."""
+        client.execute_query.return_value = projects_response
+
+        manager = ProjectsManager(client)
+        result = await manager.search("Test")
+
+        assert len(result["items"]) == 1
+        assert result["items"][0].name == "Test Project"
+
+    @pytest.mark.asyncio
+    async def test_project_not_found(self, client):
+        """Test handling when project is not found."""
+        client.execute_query.return_value = {"data": {"project": None}}
+
+        manager = ProjectsManager(client)
+        project = await manager.get("nonexistent-project")
+
+        assert project is None

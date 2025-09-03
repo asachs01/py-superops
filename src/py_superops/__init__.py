@@ -104,6 +104,7 @@ try:
         KnowledgeBaseArticleManager,
         KnowledgeBaseCollectionManager,
         KnowledgeBaseManager,
+        ProjectsManager,
         ResourceManager,
         SiteManager,
         TicketManager,
@@ -120,12 +121,15 @@ try:
         ClientStatus,
         CommonQueries,
         PaginationArgs,
+        ProjectPriority,
+        ProjectStatus,
         SortArgs,
         SuperOpsQueries,
         TicketPriority,
         TicketStatus,
         build_asset_list_query,
         build_client_list_query,
+        build_project_list_query,
         build_ticket_list_query,
     )
 
@@ -169,6 +173,7 @@ __all__ = [
             "KnowledgeBaseManager",
             "KnowledgeBaseArticleManager",
             "KnowledgeBaseCollectionManager",
+            "ProjectsManager",
         ]
         if _MANAGERS_AVAILABLE
         else []
@@ -180,6 +185,8 @@ __all__ = [
             "TicketStatus",
             "TicketPriority",
             "AssetStatus",
+            "ProjectStatus",
+            "ProjectPriority",
             "PaginationArgs",
             "SortArgs",
             "CommonQueries",
@@ -187,6 +194,7 @@ __all__ = [
             "build_client_list_query",
             "build_ticket_list_query",
             "build_asset_list_query",
+            "build_project_list_query",
         ]
         if _GRAPHQL_AVAILABLE
         else []

@@ -14,6 +14,7 @@ from typing import Any, Dict, Optional
 from .builder import (
     create_asset_query_builder,
     create_client_query_builder,
+    create_project_query_builder,
     create_ticket_query_builder,
 )
 from .types import (
@@ -22,6 +23,9 @@ from .types import (
     ClientFilter,
     ClientStatus,
     PaginationArgs,
+    ProjectFilter,
+    ProjectPriority,
+    ProjectStatus,
     SortArgs,
     TicketFilter,
     TicketPriority,
@@ -654,6 +658,310 @@ class CommonQueries:
         """
 
         variables = {"clientId": client_id}
+
+        return query, variables
+
+    # Project Queries
+    @staticmethod
+    def list_all_projects(
+        page: int = 1,
+        page_size: int = 50,
+        sort_field: str = "name",
+        sort_direction: str = "ASC",
+        detail_level: str = "core",
+        include_milestones: bool = False,
+        include_tasks: bool = False,
+        include_time_entries: bool = False,
+    ) -> tuple[str, Dict[str, Any]]:
+        """Get all projects with pagination.
+
+        Args:
+            page: Page number
+            page_size: Items per page
+            sort_field: Field to sort by
+            sort_direction: Sort direction (ASC/DESC)
+            detail_level: Level of detail (summary, core, full)
+            include_milestones: Whether to include milestones
+            include_tasks: Whether to include tasks
+            include_time_entries: Whether to include time entries
+
+        Returns:
+            Tuple of (query string, variables dict)
+        """
+        builder = create_project_query_builder(
+            detail_level=detail_level,
+            include_milestones=include_milestones,
+            include_tasks=include_tasks,
+            include_time_entries=include_time_entries,
+        )
+        pagination = PaginationArgs(page=page, pageSize=page_size)
+        sort_args = SortArgs(field=sort_field, direction=sort_direction)
+
+        query = builder.build_list(pagination=pagination, sort=sort_args)
+        variables = builder.get_variables()
+
+        return query, variables
+
+    @staticmethod
+    def list_projects_by_client(
+        client_id: str,
+        status: Optional[ProjectStatus] = None,
+        page: int = 1,
+        page_size: int = 50,
+        detail_level: str = "core",
+    ) -> tuple[str, Dict[str, Any]]:
+        """Get projects for a specific client.
+
+        Args:
+            client_id: Client ID
+            status: Optional project status filter
+            page: Page number
+            page_size: Items per page
+            detail_level: Level of detail (summary, core, full)
+
+        Returns:
+            Tuple of (query string, variables dict)
+        """
+        builder = create_project_query_builder(detail_level)
+        project_filter = ProjectFilter(client_id=client_id, status=status)
+        pagination = PaginationArgs(page=page, pageSize=page_size)
+
+        query = builder.build_list(filter_obj=project_filter, pagination=pagination)
+        variables = builder.get_variables()
+
+        return query, variables
+
+    @staticmethod
+    def list_active_projects(
+        page: int = 1, page_size: int = 50, detail_level: str = "core"
+    ) -> tuple[str, Dict[str, Any]]:
+        """Get only active projects.
+
+        Args:
+            page: Page number
+            page_size: Items per page
+            detail_level: Level of detail (summary, core, full)
+
+        Returns:
+            Tuple of (query string, variables dict)
+        """
+        builder = create_project_query_builder(detail_level)
+        project_filter = ProjectFilter(status=ProjectStatus.IN_PROGRESS)
+        pagination = PaginationArgs(page=page, pageSize=page_size)
+
+        query = builder.build_list(filter_obj=project_filter, pagination=pagination)
+        variables = builder.get_variables()
+
+        return query, variables
+
+    @staticmethod
+    def list_overdue_projects(
+        current_date: Optional[datetime] = None,
+        page: int = 1,
+        page_size: int = 50,
+        detail_level: str = "full",
+    ) -> tuple[str, Dict[str, Any]]:
+        """Get overdue projects.
+
+        Args:
+            current_date: Current date for comparison (defaults to now)
+            page: Page number
+            page_size: Items per page
+            detail_level: Level of detail (summary, core, full)
+
+        Returns:
+            Tuple of (query string, variables dict)
+        """
+        if current_date is None:
+            current_date = datetime.now()
+
+        builder = create_project_query_builder(detail_level)
+        project_filter = ProjectFilter(due_before=current_date)
+        pagination = PaginationArgs(page=page, pageSize=page_size)
+        sort_args = SortArgs(field="dueDate", direction="ASC")
+
+        query = builder.build_list(filter_obj=project_filter, pagination=pagination, sort=sort_args)
+        variables = builder.get_variables()
+
+        return query, variables
+
+    @staticmethod
+    def list_high_priority_projects(
+        page: int = 1, page_size: int = 50, detail_level: str = "full"
+    ) -> tuple[str, Dict[str, Any]]:
+        """Get high priority projects.
+
+        Args:
+            page: Page number
+            page_size: Items per page
+            detail_level: Level of detail (summary, core, full)
+
+        Returns:
+            Tuple of (query string, variables dict)
+        """
+        builder = create_project_query_builder(detail_level)
+        project_filter = ProjectFilter(priority=ProjectPriority.HIGH)
+        pagination = PaginationArgs(page=page, pageSize=page_size)
+        sort_args = SortArgs(field="priority", direction="DESC")
+
+        query = builder.build_list(filter_obj=project_filter, pagination=pagination, sort=sort_args)
+        variables = builder.get_variables()
+
+        return query, variables
+
+    @staticmethod
+    def get_project_by_id(
+        project_id: str,
+        detail_level: str = "full",
+        include_milestones: bool = True,
+        include_tasks: bool = True,
+        include_time_entries: bool = False,
+    ) -> tuple[str, Dict[str, Any]]:
+        """Get a specific project by ID with related data.
+
+        Args:
+            project_id: Project ID
+            detail_level: Level of detail (summary, core, full)
+            include_milestones: Whether to include milestones
+            include_tasks: Whether to include tasks
+            include_time_entries: Whether to include time entries
+
+        Returns:
+            Tuple of (query string, variables dict)
+        """
+        builder = create_project_query_builder(
+            detail_level=detail_level,
+            include_milestones=include_milestones,
+            include_tasks=include_tasks,
+            include_time_entries=include_time_entries,
+        )
+        query = builder.build_get(project_id)
+        variables = builder.get_variables()
+
+        return query, variables
+
+    @staticmethod
+    def get_project_overview(project_id: str) -> tuple[str, Dict[str, Any]]:
+        """Get comprehensive project overview with all related data.
+
+        Args:
+            project_id: Project ID
+
+        Returns:
+            Tuple of (query string, variables dict)
+        """
+        query = """
+        query GetProjectOverview($projectId: ID!) {
+          project(id: $projectId) {
+            ...ProjectFullFields
+            client {
+              ...ClientSummaryFields
+            }
+            milestones {
+              ...ProjectMilestoneFields
+            }
+            tasks {
+              ...ProjectTaskFullFields
+            }
+            timeEntries(page: 1, pageSize: 20) {
+              items {
+                ...ProjectTimeEntryFields
+              }
+              pagination {
+                total
+              }
+            }
+          }
+        }
+
+        fragment ProjectFullFields on Project {
+          ...BaseFields
+          clientId
+          contractId
+          name
+          description
+          status
+          priority
+          siteId
+          assignedTo
+          managerId
+          startDate
+          endDate
+          dueDate
+          budget
+          billingRate
+          progressPercentage
+          estimatedHours
+          actualHours
+          notes
+          tags
+          customFields
+        }
+
+        fragment ClientSummaryFields on Client {
+          id
+          name
+          email
+          status
+        }
+
+        fragment ProjectMilestoneFields on ProjectMilestone {
+          ...BaseFields
+          projectId
+          name
+          description
+          dueDate
+          completionDate
+          isCompleted
+          progressPercentage
+          orderIndex
+          notes
+        }
+
+        fragment ProjectTaskFullFields on ProjectTask {
+          ...BaseFields
+          projectId
+          milestoneId
+          name
+          description
+          status
+          priority
+          assignedTo
+          startDate
+          dueDate
+          completionDate
+          estimatedHours
+          actualHours
+          progressPercentage
+          orderIndex
+          notes
+          tags
+        }
+
+        fragment ProjectTimeEntryFields on ProjectTimeEntry {
+          ...BaseFields
+          projectId
+          taskId
+          userId
+          userName
+          description
+          hours
+          billableHours
+          rate
+          startTime
+          endTime
+          isBillable
+          notes
+        }
+
+        fragment BaseFields on BaseModel {
+          id
+          createdAt
+          updatedAt
+        }
+        """
+
+        variables = {"projectId": project_id}
 
         return query, variables
 

@@ -47,6 +47,8 @@ from .builder import (  # Base builders; Specific builders; Factory functions
     ClientMutationBuilder,
     ClientQueryBuilder,
     MutationBuilder,
+    ProjectMutationBuilder,
+    ProjectQueryBuilder,
     QueryBuilder,
     SelectionQueryBuilder,
     TicketMutationBuilder,
@@ -54,6 +56,8 @@ from .builder import (  # Base builders; Specific builders; Factory functions
     create_asset_query_builder,
     create_client_mutation_builder,
     create_client_query_builder,
+    create_project_mutation_builder,
+    create_project_query_builder,
     create_ticket_mutation_builder,
     create_ticket_query_builder,
 )
@@ -80,6 +84,14 @@ from .fragments import (  # Individual fragments; Fragment collections; Utility 
     KB_COLLECTION_FULL_FIELDS,
     KB_FRAGMENTS,
     PAGINATION_INFO,
+    PROJECT_CORE_FIELDS,
+    PROJECT_FRAGMENTS,
+    PROJECT_FULL_FIELDS,
+    PROJECT_MILESTONE_FIELDS,
+    PROJECT_SUMMARY_FIELDS,
+    PROJECT_TASK_CORE_FIELDS,
+    PROJECT_TASK_FULL_FIELDS,
+    PROJECT_TIME_ENTRY_FIELDS,
     SITE_CORE_FIELDS,
     SITE_FRAGMENTS,
     SITE_FULL_FIELDS,
@@ -94,6 +106,7 @@ from .fragments import (  # Individual fragments; Fragment collections; Utility 
     get_client_fields,
     get_fragment_spreads,
     get_kb_fields,
+    get_project_fields,
     get_ticket_fields,
     resolve_dependencies,
 )
@@ -127,6 +140,15 @@ from .types import (  # Base types; Enums; Models; Filters; Input types for muta
     PaginatedResponse,
     PaginationArgs,
     PaginationInfo,
+    Project,
+    ProjectFilter,
+    ProjectInput,
+    ProjectMilestone,
+    ProjectPriority,
+    ProjectsResponse,
+    ProjectStatus,
+    ProjectTask,
+    ProjectTimeEntry,
     Site,
     SiteInput,
     SitesResponse,
@@ -157,20 +179,28 @@ __all__ = [
     "TicketPriority",
     "AssetStatus",
     "ClientStatus",
+    "ProjectStatus",
+    "ProjectPriority",
     "Client",
     "Contact",
     "Site",
     "Asset",
     "Ticket",
     "TicketComment",
+    "Project",
+    "ProjectMilestone",
+    "ProjectTask",
+    "ProjectTimeEntry",
     "KnowledgeBaseCollection",
     "KnowledgeBaseArticle",
     "ClientFilter",
     "TicketFilter",
     "AssetFilter",
+    "ProjectFilter",
     "ClientInput",
     "TicketInput",
     "AssetInput",
+    "ProjectInput",
     "ContactInput",
     "SiteInput",
     "KnowledgeBaseCollectionInput",
@@ -179,6 +209,7 @@ __all__ = [
     "ClientsResponse",
     "TicketsResponse",
     "AssetsResponse",
+    "ProjectsResponse",
     "ContactsResponse",
     "SitesResponse",
     "KnowledgeBaseCollectionsResponse",
@@ -209,6 +240,13 @@ __all__ = [
     "KB_ARTICLE_CORE_FIELDS",
     "KB_ARTICLE_FULL_FIELDS",
     "KB_ARTICLE_SUMMARY_FIELDS",
+    "PROJECT_CORE_FIELDS",
+    "PROJECT_FULL_FIELDS",
+    "PROJECT_SUMMARY_FIELDS",
+    "PROJECT_MILESTONE_FIELDS",
+    "PROJECT_TASK_CORE_FIELDS",
+    "PROJECT_TASK_FULL_FIELDS",
+    "PROJECT_TIME_ENTRY_FIELDS",
     "ALL_FRAGMENTS",
     "CLIENT_FRAGMENTS",
     "CONTACT_FRAGMENTS",
@@ -216,6 +254,7 @@ __all__ = [
     "ASSET_FRAGMENTS",
     "TICKET_FRAGMENTS",
     "KB_FRAGMENTS",
+    "PROJECT_FRAGMENTS",
     "resolve_dependencies",
     "build_fragments_string",
     "get_fragment_spreads",
@@ -224,6 +263,7 @@ __all__ = [
     "get_ticket_fields",
     "get_asset_fields",
     "get_kb_fields",
+    "get_project_fields",
     # Builders
     "QueryBuilder",
     "SelectionQueryBuilder",
@@ -231,13 +271,17 @@ __all__ = [
     "ClientQueryBuilder",
     "TicketQueryBuilder",
     "AssetQueryBuilder",
+    "ProjectQueryBuilder",
     "ClientMutationBuilder",
     "TicketMutationBuilder",
+    "ProjectMutationBuilder",
     "create_client_query_builder",
     "create_ticket_query_builder",
     "create_asset_query_builder",
+    "create_project_query_builder",
     "create_client_mutation_builder",
     "create_ticket_mutation_builder",
+    "create_project_mutation_builder",
     # Queries
     "CommonQueries",
     "SuperOpsQueries",
@@ -369,6 +413,56 @@ def build_asset_list_query(
     return query, variables
 
 
+def build_project_list_query(
+    client_id: str = None,
+    status: ProjectStatus = None,
+    priority: ProjectPriority = None,
+    assigned_to: str = None,
+    page: int = 1,
+    page_size: int = 50,
+    detail_level: str = "core",
+    include_milestones: bool = False,
+    include_tasks: bool = False,
+) -> tuple[str, dict]:
+    """Build a project list query with common filters.
+
+    Args:
+        client_id: Client ID filter
+        status: Project status filter
+        priority: Project priority filter
+        assigned_to: Assigned to filter
+        page: Page number
+        page_size: Items per page
+        detail_level: Level of detail (summary, core, full)
+        include_milestones: Whether to include milestones
+        include_tasks: Whether to include tasks
+
+    Returns:
+        Tuple of (query string, variables dict)
+    """
+    builder = create_project_query_builder(detail_level, include_milestones, include_tasks)
+
+    # Build filter
+    filter_kwargs = {}
+    if client_id:
+        filter_kwargs["client_id"] = client_id
+    if status:
+        filter_kwargs["status"] = status
+    if priority:
+        filter_kwargs["priority"] = priority
+    if assigned_to:
+        filter_kwargs["assigned_to"] = assigned_to
+
+    project_filter = ProjectFilter(**filter_kwargs) if filter_kwargs else None
+    pagination = PaginationArgs(page=page, pageSize=page_size)
+    sort_args = SortArgs(field="createdAt", direction="DESC")
+
+    query = builder.build_list(filter_obj=project_filter, pagination=pagination, sort=sort_args)
+    variables = builder.get_variables()
+
+    return query, variables
+
+
 # Package information
 def get_package_info():
     """Get GraphQL utilities package information."""
@@ -390,6 +484,7 @@ def get_package_info():
             "Sites",
             "Assets",
             "Tickets",
+            "Projects",
             "Knowledge Base Collections",
             "Knowledge Base Articles",
         ],
