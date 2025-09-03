@@ -71,6 +71,8 @@ Key Features:
     - GraphQL schema introspection and validation
 """
 
+from typing import Any, Optional
+
 __version__ = "0.1.0"
 __author__ = "SuperOps Team"
 __email__ = "support@superops.com"
@@ -101,6 +103,7 @@ try:
         AssetManager,
         ClientManager,
         ContactManager,
+        ContractsManager,
         KnowledgeBaseArticleManager,
         KnowledgeBaseCollectionManager,
         KnowledgeBaseManager,
@@ -119,17 +122,22 @@ except ImportError:
 try:
     from .graphql import (  # Common types and enums; Pre-built queries; Convenience functions
         AssetStatus,
+        BillingCycle,
         ClientStatus,
         CommonQueries,
+        ContractStatus,
+        ContractType,
         PaginationArgs,
         ProjectPriority,
         ProjectStatus,
+        SLALevel,
         SortArgs,
         SuperOpsQueries,
         TicketPriority,
         TicketStatus,
         build_asset_list_query,
         build_client_list_query,
+        build_contract_list_query,
         build_project_list_query,
         build_ticket_list_query,
     )
@@ -171,6 +179,7 @@ __all__ = [
             "AssetManager",
             "SiteManager",
             "ContactManager",
+            "ContractsManager",
             "KnowledgeBaseManager",
             "KnowledgeBaseArticleManager",
             "KnowledgeBaseCollectionManager",
@@ -186,6 +195,10 @@ __all__ = [
             "TicketStatus",
             "TicketPriority",
             "AssetStatus",
+            "ContractStatus",
+            "ContractType",
+            "BillingCycle",
+            "SLALevel",
             "ProjectStatus",
             "ProjectPriority",
             "PaginationArgs",
@@ -195,6 +208,7 @@ __all__ = [
             "build_client_list_query",
             "build_ticket_list_query",
             "build_asset_list_query",
+            "build_contract_list_query",
             "build_project_list_query",
         ]
         if _GRAPHQL_AVAILABLE
@@ -255,7 +269,9 @@ def get_package_info() -> dict:
 
 
 # Convenience function for quick client creation
-def create_client(api_key: str = None, base_url: str = None, **config_kwargs) -> SuperOpsClient:
+def create_client(
+    api_key: Optional[str] = None, base_url: Optional[str] = None, **config_kwargs: Any
+) -> SuperOpsClient:
     """Create a SuperOps client with minimal configuration.
 
     Args:
@@ -276,7 +292,7 @@ def create_client(api_key: str = None, base_url: str = None, **config_kwargs) ->
 
         # Create client with custom configuration
         client = create_client(
-            api_key="your-api-key",
+            api_key="your-api-key",  # pragma: allowlist secret
             timeout=60.0,
             debug=True
         )

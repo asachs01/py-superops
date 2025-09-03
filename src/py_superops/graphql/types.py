@@ -123,6 +123,46 @@ class TaskRecurrenceType(str, Enum):
     WEEKLY = "WEEKLY"
     MONTHLY = "MONTHLY"
     YEARLY = "YEARLY"
+
+
+class ContractStatus(str, Enum):
+    """Contract status enumeration."""
+
+    DRAFT = "DRAFT"
+    ACTIVE = "ACTIVE"
+    EXPIRED = "EXPIRED"
+    CANCELLED = "CANCELLED"
+    SUSPENDED = "SUSPENDED"
+    RENEWAL_PENDING = "RENEWAL_PENDING"
+
+
+class ContractType(str, Enum):
+    """Contract type enumeration."""
+
+    SERVICE_AGREEMENT = "SERVICE_AGREEMENT"
+    MAINTENANCE_CONTRACT = "MAINTENANCE_CONTRACT"
+    PROJECT_BASED = "PROJECT_BASED"
+    SUPPORT_CONTRACT = "SUPPORT_CONTRACT"
+    MSP_CONTRACT = "MSP_CONTRACT"
+
+
+class BillingCycle(str, Enum):
+    """Billing cycle enumeration."""
+
+    MONTHLY = "MONTHLY"
+    QUARTERLY = "QUARTERLY"
+    SEMI_ANNUAL = "SEMI_ANNUAL"
+    ANNUAL = "ANNUAL"
+    ONE_TIME = "ONE_TIME"
+
+
+class SLALevel(str, Enum):
+    """SLA level enumeration."""
+
+    BASIC = "BASIC"
+    STANDARD = "STANDARD"
+    PREMIUM = "PREMIUM"
+    ENTERPRISE = "ENTERPRISE"
     CUSTOM = "CUSTOM"
 
 
@@ -458,6 +498,65 @@ class TaskTemplate(BaseModel):
     checklist_items: List[str] = field(default_factory=list)
 
 
+# Contract Types
+@dataclass
+class ContractSLA(BaseModel):
+    """Contract SLA model."""
+
+    contract_id: str
+    level: SLALevel
+    response_time_minutes: Optional[int] = None
+    resolution_time_hours: Optional[int] = None
+    availability_percentage: Optional[float] = None
+    description: Optional[str] = None
+    penalties: Optional[str] = None
+
+
+@dataclass
+class ContractRate(BaseModel):
+    """Contract billing rate model."""
+
+    contract_id: str
+    service_type: str
+    rate_type: str  # HOURLY, FIXED, TIERED
+    rate_amount: float
+    currency: str = "USD"
+    description: Optional[str] = None
+    effective_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
+
+
+@dataclass
+class Contract(BaseModel):
+    """Contract model."""
+
+    client_id: str
+    name: str
+    contract_number: str
+    contract_type: ContractType
+    start_date: datetime
+    status: ContractStatus = ContractStatus.DRAFT
+    end_date: Optional[datetime] = None
+    renewal_date: Optional[datetime] = None
+    auto_renew: bool = False
+    billing_cycle: BillingCycle = BillingCycle.MONTHLY
+    contract_value: Optional[float] = None
+    currency: str = "USD"
+    description: Optional[str] = None
+    terms_and_conditions: Optional[str] = None
+    renewal_terms: Optional[str] = None
+    cancellation_terms: Optional[str] = None
+    signed_by_client: Optional[str] = None
+    signed_by_provider: Optional[str] = None
+    signed_date: Optional[datetime] = None
+    notification_days: int = 30
+    tags: List[str] = field(default_factory=list)
+    custom_fields: Dict[str, Any] = field(default_factory=dict)
+    # Related data
+    slas: List[ContractSLA] = field(default_factory=list)
+    rates: List[ContractRate] = field(default_factory=list)
+
+
 # Query Filter Types
 @dataclass
 class ClientFilter:
@@ -581,6 +680,31 @@ class TaskFilter:
     actual_hours_max: Optional[float] = None
 
 
+@dataclass
+class ContractFilter:
+    """Contract query filter."""
+
+    client_id: Optional[str] = None
+    name: Optional[str] = None
+    contract_number: Optional[str] = None
+    contract_type: Optional[ContractType] = None
+    status: Optional[ContractStatus] = None
+    billing_cycle: Optional[BillingCycle] = None
+    auto_renew: Optional[bool] = None
+    start_date_after: Optional[datetime] = None
+    start_date_before: Optional[datetime] = None
+    end_date_after: Optional[datetime] = None
+    end_date_before: Optional[datetime] = None
+    renewal_date_after: Optional[datetime] = None
+    renewal_date_before: Optional[datetime] = None
+    value_min: Optional[float] = None
+    value_max: Optional[float] = None
+    tags: Optional[List[str]] = None
+    created_after: Optional[datetime] = None
+    created_before: Optional[datetime] = None
+>>>>>>> feature/contracts-api
+
+
 # Pagination Types
 @dataclass
 class PaginationArgs:
@@ -589,7 +713,7 @@ class PaginationArgs:
     page: int = 1
     pageSize: int = 50
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Validate pagination arguments."""
         if self.page < 1:
             raise ValueError("Page must be >= 1")
@@ -604,7 +728,7 @@ class SortArgs:
     field: str
     direction: str = "ASC"  # ASC or DESC
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Validate sort arguments."""
         if self.direction not in ("ASC", "DESC"):
             raise ValueError("Direction must be ASC or DESC")
@@ -739,6 +863,27 @@ class TaskTemplatesResponse(PaginatedResponse):
     items: List[TaskTemplate]
 
 
+@dataclass
+class ContractsResponse(PaginatedResponse):
+    """Contracts query response."""
+
+    items: List[Contract]
+
+
+@dataclass
+class ContractSLAsResponse(PaginatedResponse):
+    """Contract SLAs query response."""
+
+    items: List[ContractSLA]
+
+
+@dataclass
+class ContractRatesResponse(PaginatedResponse):
+    """Contract rates query response."""
+
+    items: List[ContractRate]
+
+
 # Mutation Input Types
 @dataclass
 class ClientInput:
@@ -862,6 +1007,59 @@ class ProjectInput:
     progress_percentage: Optional[int] = None
     estimated_hours: Optional[int] = None
     notes: Optional[str] = None
+
+
+@dataclass
+class ContractSLAInput:
+    """Contract SLA creation/update input."""
+
+    contract_id: str
+    level: SLALevel
+    response_time_minutes: Optional[int] = None
+    resolution_time_hours: Optional[int] = None
+    availability_percentage: Optional[float] = None
+    description: Optional[str] = None
+    penalties: Optional[str] = None
+
+
+@dataclass
+class ContractRateInput:
+    """Contract rate creation/update input."""
+
+    contract_id: str
+    service_type: str
+    rate_type: str
+    rate_amount: float
+    currency: Optional[str] = None
+    description: Optional[str] = None
+    effective_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
+
+
+@dataclass
+class ContractInput:
+    """Contract creation/update input."""
+
+    client_id: str
+    name: str
+    contract_type: ContractType
+    start_date: datetime
+    contract_number: Optional[str] = None
+    status: Optional[ContractStatus] = None
+    end_date: Optional[datetime] = None
+    renewal_date: Optional[datetime] = None
+    auto_renew: Optional[bool] = None
+    billing_cycle: Optional[BillingCycle] = None
+    contract_value: Optional[float] = None
+    currency: Optional[str] = None
+    description: Optional[str] = None
+    terms_and_conditions: Optional[str] = None
+    renewal_terms: Optional[str] = None
+    cancellation_terms: Optional[str] = None
+    signed_by_client: Optional[str] = None
+    signed_by_provider: Optional[str] = None
+    signed_date: Optional[datetime] = None
+    notification_days: Optional[int] = None
     tags: Optional[List[str]] = None
     custom_fields: Optional[Dict[str, Any]] = None
 
@@ -1023,7 +1221,6 @@ class TaskRecurrenceInput:
     recurrence_end_date: Optional[datetime] = None
     recurrence_count: Optional[int] = None  # end after N occurrences
 
-
 # Utility Functions
 def convert_datetime_to_iso(dt: Optional[datetime]) -> Optional[str]:
     """Convert datetime to ISO string."""
@@ -1071,4 +1268,5 @@ def serialize_input(input_obj: Any) -> Dict[str, Any]:
                 result[camel_key] = serialize_filter_value(value)
         return result
     else:
-        return serialize_filter_value(input_obj)
+        # Cast to maintain type safety for mypy
+        return serialize_filter_value(input_obj)  # type: ignore[no-any-return]

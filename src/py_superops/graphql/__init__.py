@@ -77,6 +77,12 @@ from .fragments import (  # Individual fragments; Fragment collections; Utility 
     CONTACT_CORE_FIELDS,
     CONTACT_FRAGMENTS,
     CONTACT_FULL_FIELDS,
+    CONTRACT_CORE_FIELDS,
+    CONTRACT_FRAGMENTS,
+    CONTRACT_FULL_FIELDS,
+    CONTRACT_RATE_FIELDS,
+    CONTRACT_SLA_FIELDS,
+    CONTRACT_SUMMARY_FIELDS,
     KB_ARTICLE_CORE_FIELDS,
     KB_ARTICLE_FULL_FIELDS,
     KB_ARTICLE_SUMMARY_FIELDS,
@@ -104,6 +110,7 @@ from .fragments import (  # Individual fragments; Fragment collections; Utility 
     create_query_with_fragments,
     get_asset_fields,
     get_client_fields,
+    get_contract_fields,
     get_fragment_spreads,
     get_kb_fields,
     get_project_fields,
@@ -122,6 +129,7 @@ from .types import (  # Base types; Enums; Models; Filters; Input types for muta
     AssetsResponse,
     AssetStatus,
     BaseModel,
+    BillingCycle,
     Client,
     ClientFilter,
     ClientInput,
@@ -130,6 +138,18 @@ from .types import (  # Base types; Enums; Models; Filters; Input types for muta
     Contact,
     ContactInput,
     ContactsResponse,
+    Contract,
+    ContractFilter,
+    ContractInput,
+    ContractRate,
+    ContractRateInput,
+    ContractRatesResponse,
+    ContractSLA,
+    ContractSLAInput,
+    ContractSLAsResponse,
+    ContractsResponse,
+    ContractStatus,
+    ContractType,
     GraphQLResponse,
     KnowledgeBaseArticle,
     KnowledgeBaseArticleInput,
@@ -152,6 +172,7 @@ from .types import (  # Base types; Enums; Models; Filters; Input types for muta
     Site,
     SiteInput,
     SitesResponse,
+    SLALevel,
     SortArgs,
     Ticket,
     TicketComment,
@@ -179,6 +200,10 @@ __all__ = [
     "TicketPriority",
     "AssetStatus",
     "ClientStatus",
+    "BillingCycle",
+    "ContractStatus",
+    "ContractType",
+    "SLALevel",
     "ProjectStatus",
     "ProjectPriority",
     "Client",
@@ -187,6 +212,9 @@ __all__ = [
     "Asset",
     "Ticket",
     "TicketComment",
+    "Contract",
+    "ContractSLA",
+    "ContractRate",
     "Project",
     "ProjectMilestone",
     "ProjectTask",
@@ -196,6 +224,7 @@ __all__ = [
     "ClientFilter",
     "TicketFilter",
     "AssetFilter",
+    "ContractFilter",
     "ProjectFilter",
     "ClientInput",
     "TicketInput",
@@ -203,6 +232,9 @@ __all__ = [
     "ProjectInput",
     "ContactInput",
     "SiteInput",
+    "ContractInput",
+    "ContractSLAInput",
+    "ContractRateInput",
     "KnowledgeBaseCollectionInput",
     "KnowledgeBaseArticleInput",
     "PaginatedResponse",
@@ -212,6 +244,9 @@ __all__ = [
     "ProjectsResponse",
     "ContactsResponse",
     "SitesResponse",
+    "ContractsResponse",
+    "ContractSLAsResponse",
+    "ContractRatesResponse",
     "KnowledgeBaseCollectionsResponse",
     "KnowledgeBaseArticlesResponse",
     "serialize_input",
@@ -255,6 +290,12 @@ __all__ = [
     "TICKET_FRAGMENTS",
     "KB_FRAGMENTS",
     "PROJECT_FRAGMENTS",
+    "CONTRACT_CORE_FIELDS",
+    "CONTRACT_FULL_FIELDS",
+    "CONTRACT_SUMMARY_FIELDS",
+    "CONTRACT_SLA_FIELDS",
+    "CONTRACT_RATE_FIELDS",
+    "CONTRACT_FRAGMENTS",
     "resolve_dependencies",
     "build_fragments_string",
     "get_fragment_spreads",
@@ -263,6 +304,7 @@ __all__ = [
     "get_ticket_fields",
     "get_asset_fields",
     "get_kb_fields",
+    "get_contract_fields",
     "get_project_fields",
     # Builders
     "QueryBuilder",
@@ -461,6 +503,90 @@ def build_project_list_query(
     variables = builder.get_variables()
 
     return query, variables
+
+
+def build_contract_list_query(
+    client_id: str = None,
+    contract_type: ContractType = None,
+    status: ContractStatus = None,
+    page: int = 1,
+    page_size: int = 50,
+    detail_level: str = "core",
+    include_slas: bool = False,
+    include_rates: bool = False,
+) -> tuple[str, dict]:
+    """Build a contract list query with common filters.
+
+    Args:
+        client_id: Client ID filter
+        contract_type: Contract type filter
+        status: Contract status filter
+        page: Page number
+        page_size: Items per page
+        detail_level: Level of detail (summary, core, full)
+        include_slas: Whether to include SLA fields
+        include_rates: Whether to include rate fields
+
+    Returns:
+        Tuple of (query string, variables dict)
+    """
+    from .builder import QueryBuilder
+    from .fragments import get_contract_fields
+
+    # Get contract fragments
+    fragment_names = get_contract_fields(detail_level, include_slas, include_rates)
+
+    # Build filter
+    filter_kwargs = {}
+    if client_id:
+        filter_kwargs["client_id"] = client_id
+    if contract_type:
+        filter_kwargs["contract_type"] = contract_type
+    if status:
+        filter_kwargs["status"] = status
+
+    contract_filter = ContractFilter(**filter_kwargs) if filter_kwargs else None
+    pagination = PaginationArgs(page=page, pageSize=page_size)
+    sort_args = SortArgs(field="createdAt", direction="DESC")
+
+    # Build the query manually since we don't have ContractQueryBuilder yet
+    fragments_string = ""
+    if fragment_names:
+        from .fragments import build_fragments_string
+
+        fragments_string = build_fragments_string(fragment_names)
+
+    # Get fragment spreads
+    fragment_spreads = ""
+    if fragment_names:
+        from .fragments import get_fragment_spreads
+
+        fragment_spreads = get_fragment_spreads(fragment_names)
+
+    query = f"""
+    query ListContracts($filter: ContractFilter, $pagination: PaginationArgs, $sort: SortArgs) {{
+        contracts(filter: $filter, pagination: $pagination, sort: $sort) {{
+            items {{
+                {fragment_spreads}
+            }}
+            pagination {{
+                ...PaginationInfo
+            }}
+        }}
+    }}
+
+    {fragments_string}
+    """
+
+    variables = {}
+    if contract_filter:
+        variables["filter"] = serialize_input(contract_filter)
+    if pagination:
+        variables["pagination"] = serialize_input(pagination)
+    if sort_args:
+        variables["sort"] = serialize_input(sort_args)
+
+    return query.strip(), variables
 
 
 # Package information
