@@ -166,6 +166,72 @@ class SLALevel(str, Enum):
     CUSTOM = "CUSTOM"
 
 
+class WebhookEvent(str, Enum):
+    """Webhook event type enumeration."""
+
+    TICKET_CREATED = "TICKET_CREATED"
+    TICKET_UPDATED = "TICKET_UPDATED"
+    TICKET_DELETED = "TICKET_DELETED"
+    TICKET_ASSIGNED = "TICKET_ASSIGNED"
+    TICKET_STATUS_CHANGED = "TICKET_STATUS_CHANGED"
+    TICKET_COMMENT_ADDED = "TICKET_COMMENT_ADDED"
+    
+    CLIENT_CREATED = "CLIENT_CREATED"
+    CLIENT_UPDATED = "CLIENT_UPDATED"
+    CLIENT_DELETED = "CLIENT_DELETED"
+    CLIENT_STATUS_CHANGED = "CLIENT_STATUS_CHANGED"
+    
+    ASSET_CREATED = "ASSET_CREATED"
+    ASSET_UPDATED = "ASSET_UPDATED"
+    ASSET_DELETED = "ASSET_DELETED"
+    ASSET_STATUS_CHANGED = "ASSET_STATUS_CHANGED"
+    
+    PROJECT_CREATED = "PROJECT_CREATED"
+    PROJECT_UPDATED = "PROJECT_UPDATED"
+    PROJECT_DELETED = "PROJECT_DELETED"
+    PROJECT_STATUS_CHANGED = "PROJECT_STATUS_CHANGED"
+    
+    TASK_CREATED = "TASK_CREATED"
+    TASK_UPDATED = "TASK_UPDATED"
+    TASK_DELETED = "TASK_DELETED"
+    TASK_ASSIGNED = "TASK_ASSIGNED"
+    TASK_STATUS_CHANGED = "TASK_STATUS_CHANGED"
+    TASK_COMPLETED = "TASK_COMPLETED"
+    
+    CONTRACT_CREATED = "CONTRACT_CREATED"
+    CONTRACT_UPDATED = "CONTRACT_UPDATED"
+    CONTRACT_DELETED = "CONTRACT_DELETED"
+    CONTRACT_STATUS_CHANGED = "CONTRACT_STATUS_CHANGED"
+    CONTRACT_EXPIRING = "CONTRACT_EXPIRING"
+    
+    CONTACT_CREATED = "CONTACT_CREATED"
+    CONTACT_UPDATED = "CONTACT_UPDATED"
+    CONTACT_DELETED = "CONTACT_DELETED"
+    
+    SITE_CREATED = "SITE_CREATED"
+    SITE_UPDATED = "SITE_UPDATED"
+    SITE_DELETED = "SITE_DELETED"
+
+
+class WebhookStatus(str, Enum):
+    """Webhook status enumeration."""
+
+    ACTIVE = "ACTIVE"
+    INACTIVE = "INACTIVE"
+    DISABLED = "DISABLED"
+    ERROR = "ERROR"
+
+
+class WebhookDeliveryStatus(str, Enum):
+    """Webhook delivery status enumeration."""
+
+    PENDING = "PENDING"
+    SUCCESS = "SUCCESS"
+    FAILED = "FAILED"
+    RETRYING = "RETRYING"
+    CANCELLED = "CANCELLED"
+
+
 # Base Models
 @dataclass
 class BaseModel:
@@ -335,8 +401,8 @@ class ProjectTask(BaseModel):
     """Project task model."""
 
     project_id: str
-    milestone_id: Optional[str] = None
     name: str
+    milestone_id: Optional[str] = None
     description: Optional[str] = None
     status: TicketStatus = TicketStatus.OPEN
     priority: TicketPriority = TicketPriority.NORMAL
@@ -357,14 +423,14 @@ class ProjectTimeEntry(BaseModel):
     """Project time entry model."""
 
     project_id: str
-    task_id: Optional[str] = None
     user_id: str
     user_name: str
     description: str
     hours: float
+    start_time: datetime
+    task_id: Optional[str] = None
     billable_hours: Optional[float] = None
     rate: Optional[float] = None
-    start_time: datetime
     end_time: Optional[datetime] = None
     is_billable: bool = True
     notes: Optional[str] = None
@@ -557,6 +623,66 @@ class Contract(BaseModel):
     rates: List[ContractRate] = field(default_factory=list)
 
 
+# Webhook Types
+@dataclass
+class Webhook(BaseModel):
+    """Webhook model."""
+
+    name: str
+    url: str
+    events: List[WebhookEvent]
+    status: WebhookStatus = WebhookStatus.ACTIVE
+    secret: Optional[str] = None
+    description: Optional[str] = None
+    is_active: bool = True
+    retry_count: int = 3
+    timeout_seconds: int = 30
+    headers: Dict[str, str] = field(default_factory=dict)
+    last_triggered: Optional[datetime] = None
+    last_success: Optional[datetime] = None
+    last_failure: Optional[datetime] = None
+    failure_count: int = 0
+    success_count: int = 0
+    total_deliveries: int = 0
+    content_type: str = "application/json"
+    tags: List[str] = field(default_factory=list)
+
+
+@dataclass
+class WebhookDelivery(BaseModel):
+    """Webhook delivery model."""
+
+    webhook_id: str
+    event_type: WebhookEvent
+    status: WebhookDeliveryStatus
+    url: str
+    payload: Dict[str, Any]
+    response_status_code: Optional[int] = None
+    response_body: Optional[str] = None
+    response_headers: Dict[str, str] = field(default_factory=dict)
+    attempt_count: int = 1
+    next_retry_at: Optional[datetime] = None
+    delivered_at: Optional[datetime] = None
+    error_message: Optional[str] = None
+    execution_time_ms: Optional[int] = None
+    request_headers: Dict[str, str] = field(default_factory=dict)
+
+
+@dataclass
+class WebhookEventRecord(BaseModel):
+    """Webhook event record model for event history."""
+
+    webhook_id: str
+    event_type: WebhookEvent
+    resource_type: str
+    resource_id: str
+    payload: Dict[str, Any]
+    triggered_at: datetime
+    delivery_id: Optional[str] = None
+    user_id: Optional[str] = None
+    metadata: Dict[str, Any] = field(default_factory=dict)
+
+
 # Query Filter Types
 @dataclass
 class ClientFilter:
@@ -702,6 +828,36 @@ class ContractFilter:
     tags: Optional[List[str]] = None
     created_after: Optional[datetime] = None
     created_before: Optional[datetime] = None
+
+
+@dataclass
+class WebhookFilter:
+    """Webhook query filter."""
+
+    name: Optional[str] = None
+    url: Optional[str] = None
+    status: Optional[WebhookStatus] = None
+    events: Optional[List[WebhookEvent]] = None
+    is_active: Optional[bool] = None
+    tags: Optional[List[str]] = None
+    created_after: Optional[datetime] = None
+    created_before: Optional[datetime] = None
+    last_triggered_after: Optional[datetime] = None
+    last_triggered_before: Optional[datetime] = None
+
+
+@dataclass
+class WebhookDeliveryFilter:
+    """Webhook delivery query filter."""
+
+    webhook_id: Optional[str] = None
+    event_type: Optional[WebhookEvent] = None
+    status: Optional[WebhookDeliveryStatus] = None
+    response_status_code: Optional[int] = None
+    created_after: Optional[datetime] = None
+    created_before: Optional[datetime] = None
+    delivered_after: Optional[datetime] = None
+    delivered_before: Optional[datetime] = None
 
 
 # Pagination Types
@@ -881,6 +1037,27 @@ class ContractRatesResponse(PaginatedResponse):
     """Contract rates query response."""
 
     items: List[ContractRate]
+
+
+@dataclass
+class WebhooksResponse(PaginatedResponse):
+    """Webhooks query response."""
+
+    items: List[Webhook]
+
+
+@dataclass
+class WebhookDeliveriesResponse(PaginatedResponse):
+    """Webhook deliveries query response."""
+
+    items: List[WebhookDelivery]
+
+
+@dataclass
+class WebhookEventRecordsResponse(PaginatedResponse):
+    """Webhook event records query response."""
+
+    items: List[WebhookEventRecord]
 
 
 # Mutation Input Types
@@ -1083,8 +1260,8 @@ class ProjectTaskInput:
     """Project task creation/update input."""
 
     project_id: str
-    milestone_id: Optional[str] = None
     name: str
+    milestone_id: Optional[str] = None
     description: Optional[str] = None
     status: Optional[TicketStatus] = None
     priority: Optional[TicketPriority] = None
@@ -1104,13 +1281,13 @@ class ProjectTimeEntryInput:
     """Project time entry creation/update input."""
 
     project_id: str
-    task_id: Optional[str] = None
     user_id: str
     description: str
     hours: float
+    start_time: datetime
+    task_id: Optional[str] = None
     billable_hours: Optional[float] = None
     rate: Optional[float] = None
-    start_time: datetime
     end_time: Optional[datetime] = None
     is_billable: Optional[bool] = None
     notes: Optional[str] = None
@@ -1219,6 +1396,314 @@ class TaskRecurrenceInput:
     recurrence_interval: Optional[int] = None
     recurrence_end_date: Optional[datetime] = None
     recurrence_count: Optional[int] = None  # end after N occurrences
+
+
+# Webhook Types
+class WebhookEvent(str, Enum):
+    """Webhook event types."""
+    
+    # Ticket events
+    TICKET_CREATED = "TICKET_CREATED"
+    TICKET_UPDATED = "TICKET_UPDATED"
+    TICKET_DELETED = "TICKET_DELETED"
+    TICKET_ASSIGNED = "TICKET_ASSIGNED"
+    TICKET_STATUS_CHANGED = "TICKET_STATUS_CHANGED"
+    TICKET_PRIORITY_CHANGED = "TICKET_PRIORITY_CHANGED"
+    TICKET_COMMENT_ADDED = "TICKET_COMMENT_ADDED"
+    TICKET_RESOLVED = "TICKET_RESOLVED"
+    TICKET_CLOSED = "TICKET_CLOSED"
+    TICKET_REOPENED = "TICKET_REOPENED"
+    
+    # Client events
+    CLIENT_CREATED = "CLIENT_CREATED"
+    CLIENT_UPDATED = "CLIENT_UPDATED"
+    CLIENT_DELETED = "CLIENT_DELETED"
+    CLIENT_ACTIVATED = "CLIENT_ACTIVATED"
+    CLIENT_DEACTIVATED = "CLIENT_DEACTIVATED"
+    
+    # Asset events
+    ASSET_CREATED = "ASSET_CREATED"
+    ASSET_UPDATED = "ASSET_UPDATED"
+    ASSET_DELETED = "ASSET_DELETED"
+    ASSET_WARRANTY_EXPIRING = "ASSET_WARRANTY_EXPIRING"
+    ASSET_STATUS_CHANGED = "ASSET_STATUS_CHANGED"
+    
+    # Contract events
+    CONTRACT_CREATED = "CONTRACT_CREATED"
+    CONTRACT_UPDATED = "CONTRACT_UPDATED"
+    CONTRACT_SIGNED = "CONTRACT_SIGNED"
+    CONTRACT_EXPIRED = "CONTRACT_EXPIRED"
+    CONTRACT_RENEWED = "CONTRACT_RENEWED"
+    CONTRACT_CANCELLED = "CONTRACT_CANCELLED"
+    
+    # Project events
+    PROJECT_CREATED = "PROJECT_CREATED"
+    PROJECT_UPDATED = "PROJECT_UPDATED"
+    PROJECT_COMPLETED = "PROJECT_COMPLETED"
+    PROJECT_MILESTONE_REACHED = "PROJECT_MILESTONE_REACHED"
+    
+    # Task events
+    TASK_CREATED = "TASK_CREATED"
+    TASK_UPDATED = "TASK_UPDATED"
+    TASK_COMPLETED = "TASK_COMPLETED"
+    TASK_ASSIGNED = "TASK_ASSIGNED"
+    
+    # General system events
+    SYSTEM_MAINTENANCE = "SYSTEM_MAINTENANCE"
+    SYSTEM_UPDATE = "SYSTEM_UPDATE"
+
+
+class WebhookStatus(str, Enum):
+    """Webhook status."""
+    
+    ACTIVE = "ACTIVE"
+    INACTIVE = "INACTIVE"
+    DISABLED = "DISABLED"
+    ERROR = "ERROR"
+
+
+class WebhookDeliveryStatus(str, Enum):
+    """Webhook delivery status."""
+    
+    PENDING = "PENDING"
+    DELIVERED = "DELIVERED"
+    FAILED = "FAILED"
+    RETRYING = "RETRYING"
+
+
+@dataclass
+class Webhook(BaseModel):
+    """Webhook model."""
+
+    name: str
+    url: str
+    events: List[WebhookEvent]
+    status: WebhookStatus = WebhookStatus.ACTIVE
+    secret: Optional[str] = None
+    description: Optional[str] = None
+    is_active: bool = True
+    retry_count: int = 3
+    timeout_seconds: int = 30
+    headers: Dict[str, str] = field(default_factory=dict)
+    last_triggered: Optional[datetime] = None
+    last_success: Optional[datetime] = None
+    last_failure: Optional[datetime] = None
+    failure_count: int = 0
+    success_count: int = 0
+    total_deliveries: int = 0
+    delivery_count: int = 0  # alias for total_deliveries
+    content_type: str = "application/json"
+    tags: List[str] = field(default_factory=list)
+    custom_fields: Dict[str, Any] = field(default_factory=dict)
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "Webhook":
+        """Create instance from dictionary with camelCase conversion."""
+        # Create a copy to avoid modifying original data
+        converted_data = data.copy()
+        
+        # Handle camelCase to snake_case conversion
+        if "isActive" in converted_data:
+            converted_data["is_active"] = converted_data.pop("isActive")
+        if "retryCount" in converted_data:
+            converted_data["retry_count"] = converted_data.pop("retryCount")
+        if "timeoutSeconds" in converted_data:
+            converted_data["timeout_seconds"] = converted_data.pop("timeoutSeconds")
+        if "lastTriggered" in converted_data:
+            converted_data["last_triggered"] = converted_data.pop("lastTriggered")
+        if "lastSuccess" in converted_data:
+            converted_data["last_success"] = converted_data.pop("lastSuccess")
+        if "lastFailure" in converted_data:
+            converted_data["last_failure"] = converted_data.pop("lastFailure")
+        if "failureCount" in converted_data:
+            converted_data["failure_count"] = converted_data.pop("failureCount")
+        if "successCount" in converted_data:
+            converted_data["success_count"] = converted_data.pop("successCount")
+        if "totalDeliveries" in converted_data:
+            converted_data["total_deliveries"] = converted_data.pop("totalDeliveries")
+        if "deliveryCount" in converted_data:
+            converted_data["delivery_count"] = converted_data.pop("deliveryCount")
+        if "contentType" in converted_data:
+            converted_data["content_type"] = converted_data.pop("contentType")
+        if "customFields" in converted_data:
+            converted_data["custom_fields"] = converted_data.pop("customFields")
+            
+        # Handle datetime conversion
+        for field in ["created_at", "updated_at", "last_triggered", "last_success", "last_failure"]:
+            if field in converted_data and converted_data[field]:
+                if isinstance(converted_data[field], str):
+                    converted_data[field] = convert_iso_to_datetime(converted_data[field])
+                    
+        # Convert event strings to enums
+        if "events" in converted_data:
+            events = []
+            for event in converted_data["events"]:
+                if isinstance(event, str):
+                    try:
+                        events.append(WebhookEvent(event))
+                    except ValueError:
+                        pass  # Skip invalid event types
+                else:
+                    events.append(event)
+            converted_data["events"] = events
+            
+        # Convert status string to enum  
+        if "status" in converted_data and isinstance(converted_data["status"], str):
+            try:
+                converted_data["status"] = WebhookStatus(converted_data["status"])
+            except ValueError:
+                converted_data["status"] = WebhookStatus.ACTIVE
+        
+        return cls(**converted_data)
+
+
+@dataclass
+class WebhookDelivery(BaseModel):
+    """Webhook delivery model."""
+
+    webhook_id: str
+    event_type: WebhookEvent
+    status: WebhookDeliveryStatus
+    status_code: Optional[int] = None
+    response_body: Optional[str] = None
+    request_payload: Dict[str, Any] = field(default_factory=dict)
+    attempts: int = 1
+    last_attempt_at: Optional[datetime] = None
+    next_retry_at: Optional[datetime] = None
+    error: Optional[str] = None
+
+
+@dataclass
+class WebhookEventRecord(BaseModel):
+    """Webhook event record model."""
+
+    webhook_id: str
+    event_type: WebhookEvent
+    resource_id: str
+    resource_type: str
+    payload: Dict[str, Any]
+    processed_at: Optional[datetime] = None
+    delivery_id: Optional[str] = None
+
+
+# Webhook Filter Types
+@dataclass
+class WebhookFilter:
+    """Webhook query filter."""
+
+    name: Optional[str] = None
+    url: Optional[str] = None
+    status: Optional[WebhookStatus] = None
+    events: Optional[List[WebhookEvent]] = None
+    is_active: Optional[bool] = None
+    tags: Optional[List[str]] = None
+    created_after: Optional[datetime] = None
+    created_before: Optional[datetime] = None
+
+
+@dataclass
+class WebhookDeliveryFilter:
+    """Webhook delivery query filter."""
+
+    webhook_id: Optional[str] = None
+    status: Optional[WebhookDeliveryStatus] = None
+    event_type: Optional[WebhookEvent] = None
+    status_code: Optional[int] = None
+    created_after: Optional[datetime] = None
+    created_before: Optional[datetime] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert instance to dictionary with camelCase field names."""
+        result = {}
+        field_mapping = {
+            "webhook_id": "webhookId",
+            "event_type": "eventType",
+            "status_code": "statusCode",
+            "created_after": "createdAfter",
+            "created_before": "createdBefore",
+        }
+        
+        for key, value in self.__dict__.items():
+            if value is None:
+                continue
+            
+            # Convert snake_case to camelCase
+            mapped_key = field_mapping.get(key, key)
+            
+            if isinstance(value, datetime):
+                result[mapped_key] = value.isoformat()
+            elif isinstance(value, Enum):
+                result[mapped_key] = value.value
+            else:
+                result[mapped_key] = value
+        return result
+
+
+# Webhook Response Types
+@dataclass
+class WebhooksResponse:
+    """Webhooks list response."""
+
+    items: List[Webhook]
+    pagination: PaginationInfo
+
+
+@dataclass
+class WebhookDeliveriesResponse:
+    """Webhook deliveries list response."""
+
+    items: List[WebhookDelivery]
+    pagination: PaginationInfo
+
+
+@dataclass
+class WebhookEventRecordsResponse:
+    """Webhook event records list response."""
+
+    items: List[WebhookEventRecord]
+    pagination: PaginationInfo
+
+
+# Webhook Input Types
+@dataclass
+class WebhookInput:
+    """Webhook creation/update input."""
+
+    name: str
+    url: str
+    events: List[WebhookEvent]
+    status: Optional[WebhookStatus] = None
+    secret: Optional[str] = None
+    description: Optional[str] = None
+    is_active: Optional[bool] = None
+    retry_count: Optional[int] = None
+    timeout_seconds: Optional[int] = None
+    headers: Optional[Dict[str, str]] = None
+    content_type: Optional[str] = None
+    tags: Optional[List[str]] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert instance to dictionary."""
+        result = {}
+        for key, value in self.__dict__.items():
+            if isinstance(value, datetime):
+                result[key] = value.isoformat()
+            elif isinstance(value, Enum):
+                result[key] = value.value
+            elif isinstance(value, list) and value and isinstance(value[0], Enum):
+                result[key] = [item.value for item in value]
+            else:
+                result[key] = value
+        return result
+
+
+@dataclass
+class WebhookTestInput:
+    """Webhook test input."""
+
+    webhook_id: str
+    event_type: WebhookEvent
+    test_payload: Optional[Dict[str, Any]] = None
 
 
 # Utility Functions

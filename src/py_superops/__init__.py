@@ -112,6 +112,7 @@ try:
         SiteManager,
         TasksManager,
         TicketManager,
+        WebhooksManager,
     )
 
     _MANAGERS_AVAILABLE = True
@@ -184,6 +185,7 @@ __all__ = [
             "KnowledgeBaseArticleManager",
             "KnowledgeBaseCollectionManager",
             "ProjectsManager",
+            "WebhooksManager",
         ]
         if _MANAGERS_AVAILABLE
         else []

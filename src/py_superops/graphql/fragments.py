@@ -663,6 +663,93 @@ CONTRACT_RATE_FIELDS = GraphQLFragment(
     dependencies={"BaseFields"},
 )
 
+# Webhook fragments
+WEBHOOK_CORE_FIELDS = GraphQLFragment(
+    name="WebhookCoreFields",
+    on_type="Webhook",
+    fields="""
+    ...BaseFields
+    name
+    url
+    events
+    status
+    isActive
+    """,
+    dependencies={"BaseFields"},
+)
+
+WEBHOOK_FULL_FIELDS = GraphQLFragment(
+    name="WebhookFullFields",
+    on_type="Webhook",
+    fields="""
+    ...WebhookCoreFields
+    description
+    secret
+    retryCount
+    timeoutSeconds
+    headers
+    lastTriggered
+    lastSuccess
+    lastFailure
+    failureCount
+    successCount
+    totalDeliveries
+    contentType
+    tags
+    """,
+    dependencies={"WebhookCoreFields"},
+)
+
+WEBHOOK_SUMMARY_FIELDS = GraphQLFragment(
+    name="WebhookSummaryFields",
+    on_type="Webhook",
+    fields="""
+    id
+    name
+    url
+    status
+    isActive
+    lastTriggered
+    successCount
+    failureCount
+    """,
+)
+
+WEBHOOK_DELIVERY_FIELDS = GraphQLFragment(
+    name="WebhookDeliveryFields",
+    on_type="WebhookDelivery",
+    fields="""
+    ...BaseFields
+    webhookId
+    eventType
+    status
+    url
+    responseStatusCode
+    attemptCount
+    nextRetryAt
+    deliveredAt
+    errorMessage
+    executionTimeMs
+    """,
+    dependencies={"BaseFields"},
+)
+
+WEBHOOK_EVENT_RECORD_FIELDS = GraphQLFragment(
+    name="WebhookEventRecordFields",
+    on_type="WebhookEventRecord",
+    fields="""
+    ...BaseFields
+    webhookId
+    eventType
+    resourceType
+    resourceId
+    triggeredAt
+    deliveryId
+    userId
+    """,
+    dependencies={"BaseFields"},
+)
+
 
 # Fragment collections for easy access
 ALL_FRAGMENTS = {
@@ -707,6 +794,11 @@ ALL_FRAGMENTS = {
         CONTRACT_SUMMARY_FIELDS,
         CONTRACT_SLA_FIELDS,
         CONTRACT_RATE_FIELDS,
+        WEBHOOK_CORE_FIELDS,
+        WEBHOOK_FULL_FIELDS,
+        WEBHOOK_SUMMARY_FIELDS,
+        WEBHOOK_DELIVERY_FIELDS,
+        WEBHOOK_EVENT_RECORD_FIELDS,
     ]
 }
 
@@ -772,6 +864,14 @@ CONTRACT_FRAGMENTS = {
     "summary": CONTRACT_SUMMARY_FIELDS,
     "sla": CONTRACT_SLA_FIELDS,
     "rate": CONTRACT_RATE_FIELDS,
+}
+
+WEBHOOK_FRAGMENTS = {
+    "core": WEBHOOK_CORE_FIELDS,
+    "full": WEBHOOK_FULL_FIELDS,
+    "summary": WEBHOOK_SUMMARY_FIELDS,
+    "delivery": WEBHOOK_DELIVERY_FIELDS,
+    "event_record": WEBHOOK_EVENT_RECORD_FIELDS,
 }
 
 
@@ -1059,5 +1159,37 @@ def get_contract_fields(
 
     if include_rates:
         fragments.add("ContractRateFields")
+
+    return fragments
+
+
+def get_webhook_fields(
+    detail_level: str = "core",
+    include_deliveries: bool = False,
+    include_events: bool = False,
+) -> Set[str]:
+    """Get webhook fragment names for specified detail level.
+
+    Args:
+        detail_level: Level of detail (summary, core, full)
+        include_deliveries: Whether to include delivery fields
+        include_events: Whether to include event record fields
+
+    Returns:
+        Set of fragment names
+    """
+    mapping = {
+        "summary": {"WebhookSummaryFields"},
+        "core": {"WebhookCoreFields"},
+        "full": {"WebhookFullFields"},
+    }
+
+    fragments = mapping.get(detail_level, {"WebhookCoreFields"})
+
+    if include_deliveries:
+        fragments.add("WebhookDeliveryFields")
+
+    if include_events:
+        fragments.add("WebhookEventRecordFields")
 
     return fragments
