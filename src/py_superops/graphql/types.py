@@ -702,7 +702,6 @@ class ContractFilter:
     tags: Optional[List[str]] = None
     created_after: Optional[datetime] = None
     created_before: Optional[datetime] = None
->>>>>>> feature/contracts-api
 
 
 # Pagination Types
