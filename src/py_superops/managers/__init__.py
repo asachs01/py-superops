@@ -46,6 +46,7 @@ Available Managers:
     - AssetManager: Asset tracking and warranty management
     - SiteManager: Site/location management
     - ContactManager: Contact organization and management
+    - CommentsManager: Comment management and threaded conversations
     - KnowledgeBaseManager: Knowledge base articles and collections
     - ProjectsManager: Project management and tracking
     - ContractsManager: Contract lifecycle and management operations
@@ -54,6 +55,7 @@ Available Managers:
 from .assets import AssetManager
 from .base import ResourceManager
 from .clients import ClientManager
+from .comments import CommentsManager
 from .contacts import ContactManager
 from .contracts import ContractsManager
 from .knowledge_base import (
@@ -76,6 +78,7 @@ __all__ = [
     "AssetManager",
     "SiteManager",
     "ContactManager",
+    "CommentsManager",
     "ContractsManager",
     "KnowledgeBaseManager",
     "KnowledgeBaseArticleManager",
@@ -91,6 +94,7 @@ MANAGER_REGISTRY = {
     "assets": AssetManager,
     "sites": SiteManager,
     "contacts": ContactManager,
+    "comments": CommentsManager,
     "contracts": ContractsManager,
     "knowledge_base": KnowledgeBaseManager,
     "projects": ProjectsManager,

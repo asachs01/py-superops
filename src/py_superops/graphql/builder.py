@@ -16,7 +16,7 @@ from .fragments import (
     build_fragments_string,
     get_asset_fields,
     get_client_fields,
-    get_kb_fields,
+    get_comment_fields,
     get_project_fields,
     get_task_fields,
     get_ticket_fields,
@@ -25,6 +25,8 @@ from .types import (
     AssetFilter,
     ClientFilter,
     ClientInput,
+    CommentFilter,
+    CommentInput,
     PaginationArgs,
     ProjectFilter,
     ProjectInput,
@@ -33,7 +35,6 @@ from .types import (
     ProjectTimeEntryInput,
     SortArgs,
     TaskFilter,
-    TaskInput,
     TicketFilter,
     TicketInput,
     serialize_filter_value,
@@ -694,6 +695,163 @@ class TaskQueryBuilder(SelectionQueryBuilder):
         return self.build("task", "id: $id")
 
 
+class CommentQueryBuilder(SelectionQueryBuilder):
+    """Builder for comment-related queries."""
+
+    def __init__(self, detail_level: str = "core", include_attachments: bool = False):
+        """Initialize comment query builder.
+
+        Args:
+            detail_level: Level of detail (summary, core, full)
+            include_attachments: Whether to include attachment fields
+        """
+        super().__init__()
+        self.detail_level = detail_level
+        self.include_attachments = include_attachments
+        self.add_fragments(get_comment_fields(detail_level, include_attachments))
+
+    def list_comments(
+        self,
+        filter_obj: Optional[CommentFilter] = None,
+        pagination: Optional[PaginationArgs] = None,
+        sort: Optional[SortArgs] = None,
+    ) -> "CommentQueryBuilder":
+        """Build a list comments query.
+
+        Args:
+            filter_obj: Comment filter
+            pagination: Pagination arguments
+            sort: Sort arguments
+
+        Returns:
+            Self for chaining
+        """
+        # Build arguments
+        args = []
+
+        if filter_obj:
+            self.add_variable("filter", "CommentFilter", serialize_input(filter_obj))
+            args.append("filter: $filter")
+
+        if pagination:
+            self.add_variable("page", "Int", pagination.page)
+            self.add_variable("pageSize", "Int", pagination.pageSize)
+            args.append("page: $page, pageSize: $pageSize")
+
+        if sort:
+            self.add_variable("sortBy", "String", sort.field)
+            self.add_variable("sortDirection", "SortDirection", sort.direction)
+            args.append("sortBy: $sortBy, sortDirection: $sortDirection")
+
+        # Add selections
+        fragment_name = f"Comment{self.detail_level.capitalize()}Fields"
+        self.add_selection(
+            f"""
+        items {{
+            ...{fragment_name}
+        }}
+        """
+        )
+        self.add_selection("pagination { ...PaginationInfo }")
+        self.add_fragment("PaginationInfo")
+
+        args_str = ", ".join(args) if args else ""
+        return self.build("comments", args_str)
+
+    def get_comment(self, comment_id: str) -> "CommentQueryBuilder":
+        """Build a get comment query.
+
+        Args:
+            comment_id: Comment ID
+
+        Returns:
+            Self for chaining
+        """
+        self.add_variable("id", "ID!", comment_id)
+
+        fragment_name = f"Comment{self.detail_level.capitalize()}Fields"
+        self.add_selection(f"...{fragment_name}")
+
+        return self.build("comment", "id: $id")
+
+    def get_comments_for_entity(
+        self,
+        entity_type: str,
+        entity_id: str,
+        pagination: Optional[PaginationArgs] = None,
+        sort: Optional[SortArgs] = None,
+        include_replies: bool = True,
+    ) -> "CommentQueryBuilder":
+        """Build a query to get comments for a specific entity.
+
+        Args:
+            entity_type: Type of entity (e.g., 'ticket', 'task', 'project')
+            entity_id: ID of the entity
+            pagination: Pagination arguments
+            sort: Sort arguments
+            include_replies: Whether to include reply comments
+
+        Returns:
+            Self for chaining
+        """
+        # Create filter for entity
+        filter_obj = CommentFilter(
+            entity_type=entity_type,
+            entity_id=entity_id,
+        )
+
+        if not include_replies:
+            filter_obj.parent_comment_id = None
+
+        return self.list_comments(filter_obj, pagination, sort)
+
+    def get_comment_replies(
+        self,
+        parent_comment_id: str,
+        pagination: Optional[PaginationArgs] = None,
+        sort: Optional[SortArgs] = None,
+    ) -> "CommentQueryBuilder":
+        """Build a query to get replies to a specific comment.
+
+        Args:
+            parent_comment_id: ID of the parent comment
+            pagination: Pagination arguments
+            sort: Sort arguments
+
+        Returns:
+            Self for chaining
+        """
+        filter_obj = CommentFilter(parent_comment_id=parent_comment_id)
+        return self.list_comments(filter_obj, pagination, sort)
+
+    def search_comments(
+        self,
+        query: str,
+        entity_type: Optional[str] = None,
+        entity_id: Optional[str] = None,
+        pagination: Optional[PaginationArgs] = None,
+        sort: Optional[SortArgs] = None,
+    ) -> "CommentQueryBuilder":
+        """Build a search comments query.
+
+        Args:
+            query: Search query string
+            entity_type: Optional entity type filter
+            entity_id: Optional entity ID filter
+            pagination: Pagination arguments
+            sort: Sort arguments
+
+        Returns:
+            Self for chaining
+        """
+        filter_obj = CommentFilter(
+            content_contains=query,
+            entity_type=entity_type,
+            entity_id=entity_id,
+        )
+        return self.list_comments(filter_obj, pagination, sort)
+
+
 class AssetQueryBuilder(SelectionQueryBuilder):
     """Builder for asset-related queries."""
 
@@ -1206,6 +1364,92 @@ class ProjectMutationBuilder(MutationBuilder):
         return self.mutation_field("deleteProjectTimeEntry", "id: $id").build()
 
 
+class CommentMutationBuilder(MutationBuilder):
+    """Builder for comment mutations."""
+
+    def __init__(self, detail_level: str = "core"):
+        """Initialize comment mutation builder.
+
+        Args:
+            detail_level: Level of detail for returned fields
+        """
+        super().__init__()
+        self.detail_level = detail_level
+        self.add_fragments(get_comment_fields(detail_level))
+
+    def create_comment(self, input_data: CommentInput) -> str:
+        """Build create comment mutation."""
+        self.add_variable("input", "CommentInput!", serialize_input(input_data))
+
+        fragment_name = f"Comment{self.detail_level.capitalize()}Fields"
+        self._return_fields = [f"...{fragment_name}"]
+
+        return self.mutation_field("createComment", "input: $input").build()
+
+    def update_comment(self, comment_id: str, input_data: CommentInput) -> str:
+        """Build update comment mutation."""
+        self.add_variable("id", "ID!", comment_id)
+        self.add_variable("input", "CommentInput!", serialize_input(input_data))
+
+        fragment_name = f"Comment{self.detail_level.capitalize()}Fields"
+        self._return_fields = [f"...{fragment_name}"]
+
+        return self.mutation_field("updateComment", "id: $id, input: $input").build()
+
+    def delete_comment(self, comment_id: str) -> str:
+        """Build delete comment mutation."""
+        self.add_variable("id", "ID!", comment_id)
+        self._return_fields = ["success", "message"]
+        return self.mutation_field("deleteComment", "id: $id").build()
+
+    def add_comment_to_entity(
+        self, entity_type: str, entity_id: str, content: str, is_internal: bool = False
+    ) -> str:
+        """Build mutation to add a comment to an entity.
+
+        Args:
+            entity_type: Type of entity (e.g., 'ticket', 'task', 'project')
+            entity_id: ID of the entity
+            content: Comment content
+            is_internal: Whether the comment is internal
+
+        Returns:
+            GraphQL mutation string
+        """
+        input_data = CommentInput(
+            entity_type=entity_type,
+            entity_id=entity_id,
+            content=content,
+            is_internal=is_internal,
+        )
+        return self.create_comment(input_data)
+
+    def reply_to_comment(
+        self, parent_comment_id: str, content: str, is_internal: bool = False
+    ) -> str:
+        """Build mutation to reply to a comment.
+
+        Args:
+            parent_comment_id: ID of the parent comment
+            content: Reply content
+            is_internal: Whether the reply is internal
+
+        Returns:
+            GraphQL mutation string
+        """
+        # Get the parent comment's entity info from context
+        # In practice, this would need the entity_type and entity_id from the parent
+        # For now, we'll create a basic reply structure
+        input_data = CommentInput(
+            entity_type="",  # This should be filled from parent context
+            entity_id="",  # This should be filled from parent context
+            content=content,
+            is_internal=is_internal,
+            parent_comment_id=parent_comment_id,
+        )
+        return self.create_comment(input_data)
+
+
 # Factory functions for easy builder creation
 def create_client_query_builder(detail_level: str = "core") -> ClientQueryBuilder:
     """Create a client query builder.
@@ -1328,3 +1572,30 @@ def create_task_query_builder(
         TaskQueryBuilder instance
     """
     return TaskQueryBuilder(detail_level, include_comments, include_time_entries, include_template)
+
+
+def create_comment_query_builder(
+    detail_level: str = "core", include_attachments: bool = False
+) -> CommentQueryBuilder:
+    """Create a comment query builder.
+
+    Args:
+        detail_level: Level of detail (summary, core, full)
+        include_attachments: Whether to include attachment fields
+
+    Returns:
+        CommentQueryBuilder instance
+    """
+    return CommentQueryBuilder(detail_level, include_attachments)
+
+
+def create_comment_mutation_builder(detail_level: str = "core") -> CommentMutationBuilder:
+    """Create a comment mutation builder.
+
+    Args:
+        detail_level: Level of detail for returned fields
+
+    Returns:
+        CommentMutationBuilder instance
+    """
+    return CommentMutationBuilder(detail_level)

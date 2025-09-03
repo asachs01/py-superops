@@ -125,6 +125,16 @@ class TaskRecurrenceType(str, Enum):
     YEARLY = "YEARLY"
 
 
+class CommentType(str, Enum):
+    """Comment type enumeration."""
+
+    GENERAL = "GENERAL"
+    INTERNAL = "INTERNAL"
+    TIME_LOG = "TIME_LOG"
+    STATUS_CHANGE = "STATUS_CHANGE"
+    SYSTEM = "SYSTEM"
+
+
 class ContractStatus(str, Enum):
     """Contract status enumeration."""
 
@@ -191,6 +201,35 @@ class BaseModel:
             else:
                 result[key] = value
         return result
+
+
+# Comment Types
+@dataclass
+class Comment(BaseModel):
+    """Generic comment model."""
+
+    entity_type: str  # "ticket", "task", "project", etc.
+    entity_id: str
+    author_id: str
+    author_name: str
+    content: str
+    comment_type: CommentType = CommentType.GENERAL
+    is_internal: bool = False
+    time_logged: Optional[float] = None  # hours logged with this comment
+    parent_comment_id: Optional[str] = None  # for threaded comments
+    reply_count: int = 0
+    attachments: List[str] = field(default_factory=list)  # attachment IDs
+
+
+@dataclass
+class CommentAttachment(BaseModel):
+    """Comment attachment model."""
+
+    comment_id: str
+    filename: str
+    file_url: str
+    file_size: Optional[int] = None
+    mime_type: Optional[str] = None
 
 
 # Client Types
@@ -335,8 +374,8 @@ class ProjectTask(BaseModel):
     """Project task model."""
 
     project_id: str
-    milestone_id: Optional[str] = None
     name: str
+    milestone_id: Optional[str] = None
     description: Optional[str] = None
     status: TicketStatus = TicketStatus.OPEN
     priority: TicketPriority = TicketPriority.NORMAL
@@ -357,14 +396,14 @@ class ProjectTimeEntry(BaseModel):
     """Project time entry model."""
 
     project_id: str
-    task_id: Optional[str] = None
     user_id: str
     user_name: str
     description: str
     hours: float
+    start_time: datetime
+    task_id: Optional[str] = None
     billable_hours: Optional[float] = None
     rate: Optional[float] = None
-    start_time: datetime
     end_time: Optional[datetime] = None
     is_billable: bool = True
     notes: Optional[str] = None
@@ -704,6 +743,25 @@ class ContractFilter:
     created_before: Optional[datetime] = None
 
 
+@dataclass
+class CommentFilter:
+    """Comment query filter."""
+
+    entity_type: Optional[str] = None
+    entity_id: Optional[str] = None
+    author_id: Optional[str] = None
+    comment_type: Optional[CommentType] = None
+    is_internal: Optional[bool] = None
+    has_time_logged: Optional[bool] = None
+    parent_comment_id: Optional[str] = None
+    is_reply: Optional[bool] = None  # has parent_comment_id
+    has_replies: Optional[bool] = None  # reply_count > 0
+    has_attachments: Optional[bool] = None
+    created_after: Optional[datetime] = None
+    created_before: Optional[datetime] = None
+    content_contains: Optional[str] = None
+
+
 # Pagination Types
 @dataclass
 class PaginationArgs:
@@ -881,6 +939,20 @@ class ContractRatesResponse(PaginatedResponse):
     """Contract rates query response."""
 
     items: List[ContractRate]
+
+
+@dataclass
+class CommentsResponse(PaginatedResponse):
+    """Comments query response."""
+
+    items: List[Comment]
+
+
+@dataclass
+class CommentAttachmentsResponse(PaginatedResponse):
+    """Comment attachments query response."""
+
+    items: List[CommentAttachment]
 
 
 # Mutation Input Types
@@ -1083,8 +1155,8 @@ class ProjectTaskInput:
     """Project task creation/update input."""
 
     project_id: str
-    milestone_id: Optional[str] = None
     name: str
+    milestone_id: Optional[str] = None
     description: Optional[str] = None
     status: Optional[TicketStatus] = None
     priority: Optional[TicketPriority] = None
@@ -1104,13 +1176,13 @@ class ProjectTimeEntryInput:
     """Project time entry creation/update input."""
 
     project_id: str
-    task_id: Optional[str] = None
     user_id: str
     description: str
     hours: float
+    start_time: datetime
+    task_id: Optional[str] = None
     billable_hours: Optional[float] = None
     rate: Optional[float] = None
-    start_time: datetime
     end_time: Optional[datetime] = None
     is_billable: Optional[bool] = None
     notes: Optional[str] = None
@@ -1219,6 +1291,30 @@ class TaskRecurrenceInput:
     recurrence_interval: Optional[int] = None
     recurrence_end_date: Optional[datetime] = None
     recurrence_count: Optional[int] = None  # end after N occurrences
+
+
+@dataclass
+class CommentInput:
+    """Comment creation/update input."""
+
+    entity_type: str
+    entity_id: str
+    content: str
+    comment_type: Optional[CommentType] = None
+    is_internal: Optional[bool] = None
+    time_logged: Optional[float] = None
+    parent_comment_id: Optional[str] = None
+    attachment_ids: Optional[List[str]] = None
+
+
+@dataclass
+class CommentAttachmentInput:
+    """Comment attachment creation input."""
+
+    comment_id: str
+    filename: str
+    file_data: str  # base64 encoded file data
+    mime_type: Optional[str] = None
 
 
 # Utility Functions
