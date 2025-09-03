@@ -176,6 +176,35 @@ class SLALevel(str, Enum):
     CUSTOM = "CUSTOM"
 
 
+class AttachmentType(str, Enum):
+    """Attachment type enumeration."""
+
+    DOCUMENT = "DOCUMENT"
+    IMAGE = "IMAGE"
+    VIDEO = "VIDEO"
+    AUDIO = "AUDIO"
+    ARCHIVE = "ARCHIVE"
+    SPREADSHEET = "SPREADSHEET"
+    PRESENTATION = "PRESENTATION"
+    CODE = "CODE"
+    OTHER = "OTHER"
+
+
+class EntityType(str, Enum):
+    """Entity type enumeration for attachments and comments."""
+
+    TICKET = "TICKET"
+    TASK = "TASK"
+    PROJECT = "PROJECT"
+    CLIENT = "CLIENT"
+    ASSET = "ASSET"
+    CONTRACT = "CONTRACT"
+    SITE = "SITE"
+    CONTACT = "CONTACT"
+    KB_ARTICLE = "KB_ARTICLE"
+    KB_COLLECTION = "KB_COLLECTION"
+
+
 # Base Models
 @dataclass
 class BaseModel:
@@ -523,6 +552,29 @@ class TaskTimeEntry(BaseModel):
     hourly_rate: Optional[float] = None
 
 
+# Attachment Types
+@dataclass
+class Attachment(BaseModel):
+    """Attachment model."""
+
+    filename: str
+    original_filename: str
+    file_size: int
+    mime_type: str
+    entity_type: EntityType
+    entity_id: str
+    attachment_type: Optional[AttachmentType] = None
+    description: Optional[str] = None
+    url: Optional[str] = None
+    download_url: Optional[str] = None
+    version: int = 1
+    uploaded_by: Optional[str] = None
+    uploaded_by_name: Optional[str] = None
+    is_public: bool = False
+    checksum: Optional[str] = None
+    metadata: Dict[str, Any] = field(default_factory=dict)
+
+
 @dataclass
 class TaskTemplate(BaseModel):
     """Task template model."""
@@ -762,6 +814,24 @@ class CommentFilter:
     content_contains: Optional[str] = None
 
 
+@dataclass
+class AttachmentFilter:
+    """Attachment query filter."""
+
+    filename: Optional[str] = None
+    mime_type: Optional[str] = None
+    attachment_type: Optional[AttachmentType] = None
+    entity_type: Optional[EntityType] = None
+    entity_id: Optional[str] = None
+    uploaded_by: Optional[str] = None
+    is_public: Optional[bool] = None
+    file_size_min: Optional[int] = None
+    file_size_max: Optional[int] = None
+    version: Optional[int] = None
+    created_after: Optional[datetime] = None
+    created_before: Optional[datetime] = None
+
+
 # Pagination Types
 @dataclass
 class PaginationArgs:
@@ -953,6 +1023,13 @@ class CommentAttachmentsResponse(PaginatedResponse):
     """Comment attachments query response."""
 
     items: List[CommentAttachment]
+
+
+@dataclass
+class AttachmentsResponse(PaginatedResponse):
+    """Attachments query response."""
+
+    items: List[Attachment]
 
 
 # Mutation Input Types
@@ -1315,6 +1392,49 @@ class CommentAttachmentInput:
     filename: str
     file_data: str  # base64 encoded file data
     mime_type: Optional[str] = None
+
+
+@dataclass
+class AttachmentInput:
+    """Attachment creation/update input."""
+
+    filename: str
+    entity_type: EntityType
+    entity_id: str
+    description: Optional[str] = None
+    attachment_type: Optional[AttachmentType] = None
+    is_public: Optional[bool] = None
+    metadata: Optional[Dict[str, Any]] = None
+
+
+@dataclass
+class AttachmentUploadInput:
+    """Attachment upload input with file data."""
+
+    filename: str
+    original_filename: str
+    entity_type: EntityType
+    entity_id: str
+    file_size: int
+    mime_type: str
+    description: Optional[str] = None
+    attachment_type: Optional[AttachmentType] = None
+    is_public: Optional[bool] = None
+    checksum: Optional[str] = None
+    metadata: Optional[Dict[str, Any]] = None
+
+
+@dataclass
+class AttachmentVersionInput:
+    """Attachment version creation input."""
+
+    attachment_id: str
+    filename: str
+    original_filename: str
+    file_size: int
+    mime_type: str
+    description: Optional[str] = None
+    checksum: Optional[str] = None
 
 
 # Utility Functions

@@ -101,6 +101,7 @@ from .exceptions import (
 try:
     from .managers import (  # Base manager; Domain-specific managers
         AssetManager,
+        AttachmentsManager,
         ClientManager,
         CommentsManager,
         ContactManager,
@@ -123,6 +124,7 @@ except ImportError:
 try:
     from .graphql import (  # Common types and enums; Pre-built queries; Convenience functions
         AssetStatus,
+        AttachmentType,
         BillingCycle,
         ClientStatus,
         Comment,
@@ -130,6 +132,7 @@ try:
         CommonQueries,
         ContractStatus,
         ContractType,
+        EntityType,
         PaginationArgs,
         ProjectPriority,
         ProjectStatus,
@@ -181,6 +184,7 @@ __all__ = [
             "TicketManager",
             "TasksManager",
             "AssetManager",
+            "AttachmentsManager",
             "SiteManager",
             "ContactManager",
             "CommentsManager",
@@ -200,8 +204,10 @@ __all__ = [
             "TicketStatus",
             "TicketPriority",
             "AssetStatus",
+            "AttachmentType",
             "Comment",
             "CommentType",
+            "EntityType",
             "ContractStatus",
             "ContractType",
             "BillingCycle",
