@@ -8,7 +8,7 @@ This module provides GraphQL fragments that can be reused across queries and mut
 to maintain consistency and reduce duplication.
 """
 
-from typing import Dict, Set
+from typing import Set
 
 
 class GraphQLFragment:
@@ -325,6 +325,134 @@ KB_ARTICLE_SUMMARY_FIELDS = GraphQLFragment(
     """,
 )
 
+# Project fragments
+PROJECT_CORE_FIELDS = GraphQLFragment(
+    name="ProjectCoreFields",
+    on_type="Project",
+    fields="""
+    ...BaseFields
+    clientId
+    contractId
+    name
+    status
+    priority
+    assignedTo
+    managerId
+    startDate
+    endDate
+    dueDate
+    """,
+    dependencies={"BaseFields"},
+)
+
+PROJECT_FULL_FIELDS = GraphQLFragment(
+    name="ProjectFullFields",
+    on_type="Project",
+    fields="""
+    ...ProjectCoreFields
+    description
+    siteId
+    budget
+    billingRate
+    progressPercentage
+    estimatedHours
+    actualHours
+    notes
+    tags
+    customFields
+    """,
+    dependencies={"ProjectCoreFields"},
+)
+
+PROJECT_SUMMARY_FIELDS = GraphQLFragment(
+    name="ProjectSummaryFields",
+    on_type="Project",
+    fields="""
+    id
+    name
+    status
+    priority
+    assignedTo
+    managerId
+    startDate
+    dueDate
+    progressPercentage
+    """,
+)
+
+PROJECT_MILESTONE_FIELDS = GraphQLFragment(
+    name="ProjectMilestoneFields",
+    on_type="ProjectMilestone",
+    fields="""
+    ...BaseFields
+    projectId
+    name
+    description
+    dueDate
+    completionDate
+    isCompleted
+    progressPercentage
+    orderIndex
+    notes
+    """,
+    dependencies={"BaseFields"},
+)
+
+PROJECT_TASK_CORE_FIELDS = GraphQLFragment(
+    name="ProjectTaskCoreFields",
+    on_type="ProjectTask",
+    fields="""
+    ...BaseFields
+    projectId
+    milestoneId
+    name
+    status
+    priority
+    assignedTo
+    startDate
+    dueDate
+    completionDate
+    """,
+    dependencies={"BaseFields"},
+)
+
+PROJECT_TASK_FULL_FIELDS = GraphQLFragment(
+    name="ProjectTaskFullFields",
+    on_type="ProjectTask",
+    fields="""
+    ...ProjectTaskCoreFields
+    description
+    estimatedHours
+    actualHours
+    progressPercentage
+    orderIndex
+    notes
+    tags
+    """,
+    dependencies={"ProjectTaskCoreFields"},
+)
+
+PROJECT_TIME_ENTRY_FIELDS = GraphQLFragment(
+    name="ProjectTimeEntryFields",
+    on_type="ProjectTimeEntry",
+    fields="""
+    ...BaseFields
+    projectId
+    taskId
+    userId
+    userName
+    description
+    hours
+    billableHours
+    rate
+    startTime
+    endTime
+    isBillable
+    notes
+    """,
+    dependencies={"BaseFields"},
+)
+
 
 # Fragment collections for easy access
 ALL_FRAGMENTS = {
@@ -346,6 +474,13 @@ ALL_FRAGMENTS = {
         TICKET_FULL_FIELDS,
         TICKET_SUMMARY_FIELDS,
         TICKET_COMMENT_FIELDS,
+        PROJECT_CORE_FIELDS,
+        PROJECT_FULL_FIELDS,
+        PROJECT_SUMMARY_FIELDS,
+        PROJECT_MILESTONE_FIELDS,
+        PROJECT_TASK_CORE_FIELDS,
+        PROJECT_TASK_FULL_FIELDS,
+        PROJECT_TIME_ENTRY_FIELDS,
         KB_COLLECTION_CORE_FIELDS,
         KB_COLLECTION_FULL_FIELDS,
         KB_ARTICLE_CORE_FIELDS,
@@ -381,6 +516,16 @@ TICKET_FRAGMENTS = {
     "full": TICKET_FULL_FIELDS,
     "summary": TICKET_SUMMARY_FIELDS,
     "comment": TICKET_COMMENT_FIELDS,
+}
+
+PROJECT_FRAGMENTS = {
+    "core": PROJECT_CORE_FIELDS,
+    "full": PROJECT_FULL_FIELDS,
+    "summary": PROJECT_SUMMARY_FIELDS,
+    "milestone": PROJECT_MILESTONE_FIELDS,
+    "task_core": PROJECT_TASK_CORE_FIELDS,
+    "task_full": PROJECT_TASK_FULL_FIELDS,
+    "time_entry": PROJECT_TIME_ENTRY_FIELDS,
 }
 
 KB_FRAGMENTS = {
@@ -532,6 +677,53 @@ def get_asset_fields(detail_level: str = "core") -> Set[str]:
         "full": {"AssetFullFields"},
     }
     return mapping.get(detail_level, {"AssetCoreFields"})
+
+
+def get_project_fields(
+    detail_level: str = "core",
+    include_milestones: bool = False,
+    include_tasks: bool = False,
+    include_time_entries: bool = False,
+    task_detail: str = "core",
+) -> Set[str]:
+    """Get project fragment names for specified detail level.
+
+    Args:
+        detail_level: Level of detail for projects (summary, core, full)
+        include_milestones: Whether to include milestone fields
+        include_tasks: Whether to include task fields
+        include_time_entries: Whether to include time entry fields
+        task_detail: Level of detail for tasks (core, full)
+
+    Returns:
+        Set of fragment names
+    """
+    project_mapping = {
+        "summary": "ProjectSummaryFields",
+        "core": "ProjectCoreFields",
+        "full": "ProjectFullFields",
+    }
+
+    fragments = set()
+
+    if detail_level in project_mapping:
+        fragments.add(project_mapping[detail_level])
+
+    if include_milestones:
+        fragments.add("ProjectMilestoneFields")
+
+    if include_tasks:
+        task_mapping = {
+            "core": "ProjectTaskCoreFields",
+            "full": "ProjectTaskFullFields",
+        }
+        if task_detail in task_mapping:
+            fragments.add(task_mapping[task_detail])
+
+    if include_time_entries:
+        fragments.add("ProjectTimeEntryFields")
+
+    return fragments
 
 
 def get_kb_fields(collection_detail: str = "core", article_detail: str = "core") -> Set[str]:

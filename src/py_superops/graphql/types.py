@@ -13,8 +13,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional, TypedDict, Union
-from uuid import UUID
+from typing import Any, Dict, List, Optional, TypedDict
 
 
 # Base Types
@@ -72,6 +71,26 @@ class ClientStatus(str, Enum):
     ACTIVE = "ACTIVE"
     INACTIVE = "INACTIVE"
     SUSPENDED = "SUSPENDED"
+
+
+class ProjectStatus(str, Enum):
+    """Project status enumeration."""
+
+    OPEN = "OPEN"
+    IN_PROGRESS = "IN_PROGRESS"
+    COMPLETED = "COMPLETED"
+    CANCELLED = "CANCELLED"
+    ON_HOLD = "ON_HOLD"
+
+
+class ProjectPriority(str, Enum):
+    """Project priority enumeration."""
+
+    LOW = "LOW"
+    NORMAL = "NORMAL"
+    HIGH = "HIGH"
+    URGENT = "URGENT"
+    CRITICAL = "CRITICAL"
 
 
 # Base Models
@@ -196,6 +215,88 @@ class TicketComment(BaseModel):
     time_spent: Optional[int] = None  # minutes
 
 
+# Project Types
+@dataclass
+class Project(BaseModel):
+    """Project model."""
+
+    client_id: str
+    name: str
+    description: Optional[str] = None
+    status: ProjectStatus = ProjectStatus.OPEN
+    priority: ProjectPriority = ProjectPriority.NORMAL
+    contract_id: Optional[str] = None
+    site_id: Optional[str] = None
+    assigned_to: Optional[str] = None
+    manager_id: Optional[str] = None
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
+    due_date: Optional[datetime] = None
+    budget: Optional[float] = None
+    billing_rate: Optional[float] = None
+    progress_percentage: Optional[int] = None  # 0-100
+    estimated_hours: Optional[int] = None
+    actual_hours: Optional[int] = None
+    notes: Optional[str] = None
+    tags: List[str] = field(default_factory=list)
+    custom_fields: Dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class ProjectMilestone(BaseModel):
+    """Project milestone model."""
+
+    project_id: str
+    name: str
+    description: Optional[str] = None
+    due_date: Optional[datetime] = None
+    completion_date: Optional[datetime] = None
+    is_completed: bool = False
+    progress_percentage: Optional[int] = None  # 0-100
+    order_index: int = 0
+    notes: Optional[str] = None
+
+
+@dataclass
+class ProjectTask(BaseModel):
+    """Project task model."""
+
+    project_id: str
+    milestone_id: Optional[str] = None
+    name: str
+    description: Optional[str] = None
+    status: TicketStatus = TicketStatus.OPEN
+    priority: TicketPriority = TicketPriority.NORMAL
+    assigned_to: Optional[str] = None
+    start_date: Optional[datetime] = None
+    due_date: Optional[datetime] = None
+    completion_date: Optional[datetime] = None
+    estimated_hours: Optional[int] = None
+    actual_hours: Optional[int] = None
+    progress_percentage: Optional[int] = None  # 0-100
+    order_index: int = 0
+    notes: Optional[str] = None
+    tags: List[str] = field(default_factory=list)
+
+
+@dataclass
+class ProjectTimeEntry(BaseModel):
+    """Project time entry model."""
+
+    project_id: str
+    task_id: Optional[str] = None
+    user_id: str
+    user_name: str
+    description: str
+    hours: float
+    billable_hours: Optional[float] = None
+    rate: Optional[float] = None
+    start_time: datetime
+    end_time: Optional[datetime] = None
+    is_billable: bool = True
+    notes: Optional[str] = None
+
+
 # Knowledge Base Types
 @dataclass
 class KnowledgeBaseCollection(BaseModel):
@@ -268,6 +369,27 @@ class AssetFilter:
     status: Optional[AssetStatus] = None
     created_after: Optional[datetime] = None
     created_before: Optional[datetime] = None
+
+
+@dataclass
+class ProjectFilter:
+    """Project query filter."""
+
+    client_id: Optional[str] = None
+    contract_id: Optional[str] = None
+    site_id: Optional[str] = None
+    name: Optional[str] = None
+    status: Optional[ProjectStatus] = None
+    priority: Optional[ProjectPriority] = None
+    assigned_to: Optional[str] = None
+    manager_id: Optional[str] = None
+    tags: Optional[List[str]] = None
+    created_after: Optional[datetime] = None
+    created_before: Optional[datetime] = None
+    start_after: Optional[datetime] = None
+    start_before: Optional[datetime] = None
+    due_after: Optional[datetime] = None
+    due_before: Optional[datetime] = None
 
 
 # Pagination Types
@@ -372,6 +494,34 @@ class KnowledgeBaseArticlesResponse(PaginatedResponse):
     items: List[KnowledgeBaseArticle]
 
 
+@dataclass
+class ProjectsResponse(PaginatedResponse):
+    """Projects query response."""
+
+    items: List[Project]
+
+
+@dataclass
+class ProjectMilestonesResponse(PaginatedResponse):
+    """Project milestones query response."""
+
+    items: List[ProjectMilestone]
+
+
+@dataclass
+class ProjectTasksResponse(PaginatedResponse):
+    """Project tasks query response."""
+
+    items: List[ProjectTask]
+
+
+@dataclass
+class ProjectTimeEntriesResponse(PaginatedResponse):
+    """Project time entries query response."""
+
+    items: List[ProjectTimeEntry]
+
+
 # Mutation Input Types
 @dataclass
 class ClientInput:
@@ -472,6 +622,84 @@ class KnowledgeBaseArticleInput:
     is_published: Optional[bool] = None
     is_featured: Optional[bool] = None
     tags: Optional[List[str]] = None
+
+
+@dataclass
+class ProjectInput:
+    """Project creation/update input."""
+
+    client_id: str
+    name: str
+    description: Optional[str] = None
+    status: Optional[ProjectStatus] = None
+    priority: Optional[ProjectPriority] = None
+    contract_id: Optional[str] = None
+    site_id: Optional[str] = None
+    assigned_to: Optional[str] = None
+    manager_id: Optional[str] = None
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
+    due_date: Optional[datetime] = None
+    budget: Optional[float] = None
+    billing_rate: Optional[float] = None
+    progress_percentage: Optional[int] = None
+    estimated_hours: Optional[int] = None
+    notes: Optional[str] = None
+    tags: Optional[List[str]] = None
+    custom_fields: Optional[Dict[str, Any]] = None
+
+
+@dataclass
+class ProjectMilestoneInput:
+    """Project milestone creation/update input."""
+
+    project_id: str
+    name: str
+    description: Optional[str] = None
+    due_date: Optional[datetime] = None
+    completion_date: Optional[datetime] = None
+    is_completed: Optional[bool] = None
+    progress_percentage: Optional[int] = None
+    order_index: Optional[int] = None
+    notes: Optional[str] = None
+
+
+@dataclass
+class ProjectTaskInput:
+    """Project task creation/update input."""
+
+    project_id: str
+    milestone_id: Optional[str] = None
+    name: str
+    description: Optional[str] = None
+    status: Optional[TicketStatus] = None
+    priority: Optional[TicketPriority] = None
+    assigned_to: Optional[str] = None
+    start_date: Optional[datetime] = None
+    due_date: Optional[datetime] = None
+    completion_date: Optional[datetime] = None
+    estimated_hours: Optional[int] = None
+    progress_percentage: Optional[int] = None
+    order_index: Optional[int] = None
+    notes: Optional[str] = None
+    tags: Optional[List[str]] = None
+
+
+@dataclass
+class ProjectTimeEntryInput:
+    """Project time entry creation/update input."""
+
+    project_id: str
+    task_id: Optional[str] = None
+    user_id: str
+    description: str
+    hours: float
+    billable_hours: Optional[float] = None
+    rate: Optional[float] = None
+    start_time: datetime
+    end_time: Optional[datetime] = None
+    is_billable: Optional[bool] = None
+    notes: Optional[str] = None
 
 
 # Utility Functions

@@ -46,6 +46,7 @@ Available Managers:
     - SiteManager: Site/location management
     - ContactManager: Contact organization and management
     - KnowledgeBaseManager: Knowledge base articles and collections
+    - ProjectsManager: Project management and tracking
 """
 
 from .assets import AssetManager
@@ -57,6 +58,7 @@ from .knowledge_base import (
     KnowledgeBaseCollectionManager,
     KnowledgeBaseManager,
 )
+from .projects import ProjectsManager
 from .sites import SiteManager
 from .tickets import TicketManager
 
@@ -72,6 +74,7 @@ __all__ = [
     "KnowledgeBaseManager",
     "KnowledgeBaseArticleManager",
     "KnowledgeBaseCollectionManager",
+    "ProjectsManager",
 ]
 
 # Manager registry for dynamic access
@@ -82,6 +85,7 @@ MANAGER_REGISTRY = {
     "sites": SiteManager,
     "contacts": ContactManager,
     "knowledge_base": KnowledgeBaseManager,
+    "projects": ProjectsManager,
 }
 
 
