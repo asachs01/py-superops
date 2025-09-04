@@ -205,6 +205,72 @@ class EntityType(str, Enum):
     KB_COLLECTION = "KB_COLLECTION"
 
 
+class WebhookEvent(str, Enum):
+    """Webhook event type enumeration."""
+
+    TICKET_CREATED = "TICKET_CREATED"
+    TICKET_UPDATED = "TICKET_UPDATED"
+    TICKET_DELETED = "TICKET_DELETED"
+    TICKET_ASSIGNED = "TICKET_ASSIGNED"
+    TICKET_STATUS_CHANGED = "TICKET_STATUS_CHANGED"
+    TICKET_COMMENT_ADDED = "TICKET_COMMENT_ADDED"
+
+    CLIENT_CREATED = "CLIENT_CREATED"
+    CLIENT_UPDATED = "CLIENT_UPDATED"
+    CLIENT_DELETED = "CLIENT_DELETED"
+    CLIENT_STATUS_CHANGED = "CLIENT_STATUS_CHANGED"
+
+    ASSET_CREATED = "ASSET_CREATED"
+    ASSET_UPDATED = "ASSET_UPDATED"
+    ASSET_DELETED = "ASSET_DELETED"
+    ASSET_STATUS_CHANGED = "ASSET_STATUS_CHANGED"
+
+    PROJECT_CREATED = "PROJECT_CREATED"
+    PROJECT_UPDATED = "PROJECT_UPDATED"
+    PROJECT_DELETED = "PROJECT_DELETED"
+    PROJECT_STATUS_CHANGED = "PROJECT_STATUS_CHANGED"
+
+    TASK_CREATED = "TASK_CREATED"
+    TASK_UPDATED = "TASK_UPDATED"
+    TASK_DELETED = "TASK_DELETED"
+    TASK_ASSIGNED = "TASK_ASSIGNED"
+    TASK_STATUS_CHANGED = "TASK_STATUS_CHANGED"
+    TASK_COMPLETED = "TASK_COMPLETED"
+
+    CONTRACT_CREATED = "CONTRACT_CREATED"
+    CONTRACT_UPDATED = "CONTRACT_UPDATED"
+    CONTRACT_DELETED = "CONTRACT_DELETED"
+    CONTRACT_STATUS_CHANGED = "CONTRACT_STATUS_CHANGED"
+    CONTRACT_EXPIRING = "CONTRACT_EXPIRING"
+
+    CONTACT_CREATED = "CONTACT_CREATED"
+    CONTACT_UPDATED = "CONTACT_UPDATED"
+    CONTACT_DELETED = "CONTACT_DELETED"
+
+    SITE_CREATED = "SITE_CREATED"
+    SITE_UPDATED = "SITE_UPDATED"
+    SITE_DELETED = "SITE_DELETED"
+
+
+class WebhookStatus(str, Enum):
+    """Webhook status enumeration."""
+
+    ACTIVE = "ACTIVE"
+    INACTIVE = "INACTIVE"
+    DISABLED = "DISABLED"
+    ERROR = "ERROR"
+
+
+class WebhookDeliveryStatus(str, Enum):
+    """Webhook delivery status enumeration."""
+
+    PENDING = "PENDING"
+    SUCCESS = "SUCCESS"
+    FAILED = "FAILED"
+    RETRYING = "RETRYING"
+    CANCELLED = "CANCELLED"
+
+
 # Base Models
 @dataclass
 class BaseModel:
@@ -755,6 +821,66 @@ class Contract(BaseModel):
     rates: List[ContractRate] = field(default_factory=list)
 
 
+# Webhook Types
+@dataclass
+class Webhook(BaseModel):
+    """Webhook model."""
+
+    name: str
+    url: str
+    events: List[WebhookEvent]
+    status: WebhookStatus = WebhookStatus.ACTIVE
+    secret: Optional[str] = None
+    description: Optional[str] = None
+    is_active: bool = True
+    retry_count: int = 3
+    timeout_seconds: int = 30
+    headers: Dict[str, str] = field(default_factory=dict)
+    last_triggered: Optional[datetime] = None
+    last_success: Optional[datetime] = None
+    last_failure: Optional[datetime] = None
+    failure_count: int = 0
+    success_count: int = 0
+    total_deliveries: int = 0
+    content_type: str = "application/json"
+    tags: List[str] = field(default_factory=list)
+
+
+@dataclass
+class WebhookDelivery(BaseModel):
+    """Webhook delivery model."""
+
+    webhook_id: str
+    event_type: WebhookEvent
+    status: WebhookDeliveryStatus
+    url: str
+    payload: Dict[str, Any]
+    response_status_code: Optional[int] = None
+    response_body: Optional[str] = None
+    response_headers: Dict[str, str] = field(default_factory=dict)
+    attempt_count: int = 1
+    next_retry_at: Optional[datetime] = None
+    delivered_at: Optional[datetime] = None
+    error_message: Optional[str] = None
+    execution_time_ms: Optional[int] = None
+    request_headers: Dict[str, str] = field(default_factory=dict)
+
+
+@dataclass
+class WebhookEventRecord(BaseModel):
+    """Webhook event record model for event history."""
+
+    webhook_id: str
+    event_type: WebhookEvent
+    resource_type: str
+    resource_id: str
+    payload: Dict[str, Any]
+    triggered_at: datetime
+    delivery_id: Optional[str] = None
+    user_id: Optional[str] = None
+    metadata: Dict[str, Any] = field(default_factory=dict)
+
+
 # Query Filter Types
 @dataclass
 class ClientFilter:
@@ -937,6 +1063,36 @@ class AttachmentFilter:
     version: Optional[int] = None
     created_after: Optional[datetime] = None
     created_before: Optional[datetime] = None
+
+
+@dataclass
+class WebhookFilter:
+    """Webhook query filter."""
+
+    name: Optional[str] = None
+    url: Optional[str] = None
+    status: Optional[WebhookStatus] = None
+    events: Optional[List[WebhookEvent]] = None
+    is_active: Optional[bool] = None
+    tags: Optional[List[str]] = None
+    created_after: Optional[datetime] = None
+    created_before: Optional[datetime] = None
+    last_triggered_after: Optional[datetime] = None
+    last_triggered_before: Optional[datetime] = None
+
+
+@dataclass
+class WebhookDeliveryFilter:
+    """Webhook delivery query filter."""
+
+    webhook_id: Optional[str] = None
+    event_type: Optional[WebhookEvent] = None
+    status: Optional[WebhookDeliveryStatus] = None
+    response_status_code: Optional[int] = None
+    created_after: Optional[datetime] = None
+    created_before: Optional[datetime] = None
+    delivered_after: Optional[datetime] = None
+    delivered_before: Optional[datetime] = None
 
 
 # Pagination Types
@@ -1137,6 +1293,27 @@ class AttachmentsResponse(PaginatedResponse):
     """Attachments query response."""
 
     items: List[Attachment]
+
+
+@dataclass
+class WebhooksResponse(PaginatedResponse):
+    """Webhooks query response."""
+
+    items: List[Webhook]
+
+
+@dataclass
+class WebhookDeliveriesResponse(PaginatedResponse):
+    """Webhook deliveries query response."""
+
+    items: List[WebhookDelivery]
+
+
+@dataclass
+class WebhookEventRecordsResponse(PaginatedResponse):
+    """Webhook event records query response."""
+
+    items: List[WebhookEventRecord]
 
 
 # Mutation Input Types
@@ -1542,6 +1719,47 @@ class AttachmentVersionInput:
     mime_type: str
     description: Optional[str] = None
     checksum: Optional[str] = None
+
+
+@dataclass
+class WebhookInput:
+    """Webhook creation/update input."""
+
+    name: str
+    url: str
+    events: List[WebhookEvent]
+    status: Optional[WebhookStatus] = None
+    secret: Optional[str] = None
+    description: Optional[str] = None
+    is_active: Optional[bool] = None
+    retry_count: Optional[int] = None
+    timeout_seconds: Optional[int] = None
+    headers: Optional[Dict[str, str]] = None
+    content_type: Optional[str] = None
+    tags: Optional[List[str]] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert instance to dictionary."""
+        result: Dict[str, Any] = {}
+        for key, value in self.__dict__.items():
+            if isinstance(value, datetime):
+                result[key] = value.isoformat()
+            elif isinstance(value, Enum):
+                result[key] = value.value
+            elif isinstance(value, list) and value and isinstance(value[0], Enum):
+                result[key] = [item.value for item in value]
+            else:
+                result[key] = value
+        return result
+
+
+@dataclass
+class WebhookTestInput:
+    """Webhook test input."""
+
+    webhook_id: str
+    event_type: WebhookEvent
+    test_payload: Optional[Dict[str, Any]] = None
 
 
 # Utility Functions

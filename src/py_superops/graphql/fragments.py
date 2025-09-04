@@ -742,6 +742,21 @@ ATTACHMENT_CORE_FIELDS = GraphQLFragment(
     dependencies={"BaseFields"},
 )
 
+# Webhook fragments
+WEBHOOK_CORE_FIELDS = GraphQLFragment(
+    name="WebhookCoreFields",
+    on_type="Webhook",
+    fields="""
+    ...BaseFields
+    name
+    url
+    events
+    status
+    isActive
+    """,
+    dependencies={"BaseFields"},
+)
+
 ATTACHMENT_FULL_FIELDS = GraphQLFragment(
     name="AttachmentFullFields",
     on_type="Attachment",
@@ -771,6 +786,77 @@ ATTACHMENT_SUMMARY_FIELDS = GraphQLFragment(
     """,
 )
 
+WEBHOOK_FULL_FIELDS = GraphQLFragment(
+    name="WebhookFullFields",
+    on_type="Webhook",
+    fields="""
+    ...WebhookCoreFields
+    description
+    secret
+    retryCount
+    timeoutSeconds
+    headers
+    lastTriggered
+    lastSuccess
+    lastFailure
+    failureCount
+    successCount
+    totalDeliveries
+    contentType
+    tags
+    """,
+    dependencies={"WebhookCoreFields"},
+)
+
+WEBHOOK_SUMMARY_FIELDS = GraphQLFragment(
+    name="WebhookSummaryFields",
+    on_type="Webhook",
+    fields="""
+    id
+    name
+    url
+    status
+    isActive
+    lastTriggered
+    successCount
+    failureCount
+    """,
+)
+
+WEBHOOK_DELIVERY_FIELDS = GraphQLFragment(
+    name="WebhookDeliveryFields",
+    on_type="WebhookDelivery",
+    fields="""
+    ...BaseFields
+    webhookId
+    eventType
+    status
+    url
+    responseStatusCode
+    attemptCount
+    nextRetryAt
+    deliveredAt
+    errorMessage
+    executionTimeMs
+    """,
+    dependencies={"BaseFields"},
+)
+
+WEBHOOK_EVENT_RECORD_FIELDS = GraphQLFragment(
+    name="WebhookEventRecordFields",
+    on_type="WebhookEventRecord",
+    fields="""
+    ...BaseFields
+    webhookId
+    eventType
+    resourceType
+    resourceId
+    triggeredAt
+    deliveryId
+    userId
+    """,
+    dependencies={"BaseFields"},
+)
 
 # Fragment collections for easy access
 ALL_FRAGMENTS = {
@@ -822,6 +908,11 @@ ALL_FRAGMENTS = {
         ATTACHMENT_CORE_FIELDS,
         ATTACHMENT_FULL_FIELDS,
         ATTACHMENT_SUMMARY_FIELDS,
+        WEBHOOK_CORE_FIELDS,
+        WEBHOOK_FULL_FIELDS,
+        WEBHOOK_SUMMARY_FIELDS,
+        WEBHOOK_DELIVERY_FIELDS,
+        WEBHOOK_EVENT_RECORD_FIELDS,
     ]
 }
 
@@ -900,6 +991,14 @@ ATTACHMENT_FRAGMENTS = {
     "core": ATTACHMENT_CORE_FIELDS,
     "full": ATTACHMENT_FULL_FIELDS,
     "summary": ATTACHMENT_SUMMARY_FIELDS,
+}
+
+WEBHOOK_FRAGMENTS = {
+    "core": WEBHOOK_CORE_FIELDS,
+    "full": WEBHOOK_FULL_FIELDS,
+    "summary": WEBHOOK_SUMMARY_FIELDS,
+    "delivery": WEBHOOK_DELIVERY_FIELDS,
+    "event_record": WEBHOOK_EVENT_RECORD_FIELDS,
 }
 
 
@@ -1229,5 +1328,37 @@ def get_attachment_fields(detail_level: str = "core") -> Set[str]:
         "core": {"AttachmentCoreFields"},
         "full": {"AttachmentFullFields"},
     }
-    
+
     return mapping.get(detail_level, {"AttachmentCoreFields"})
+
+
+def get_webhook_fields(
+    detail_level: str = "core",
+    include_deliveries: bool = False,
+    include_events: bool = False,
+) -> Set[str]:
+    """Get webhook fragment names for specified detail level.
+
+    Args:
+        detail_level: Level of detail (summary, core, full)
+        include_deliveries: Whether to include delivery fields
+        include_events: Whether to include event record fields
+
+    Returns:
+        Set of fragment names
+    """
+    mapping = {
+        "summary": {"WebhookSummaryFields"},
+        "core": {"WebhookCoreFields"},
+        "full": {"WebhookFullFields"},
+    }
+
+    fragments = mapping.get(detail_level, {"WebhookCoreFields"})
+
+    if include_deliveries:
+        fragments.add("WebhookDeliveryFields")
+
+    if include_events:
+        fragments.add("WebhookEventRecordFields")
+
+    return fragments
