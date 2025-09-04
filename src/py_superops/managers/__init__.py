@@ -50,6 +50,7 @@ Available Managers:
     - KnowledgeBaseManager: Knowledge base articles and collections
     - ProjectsManager: Project management and tracking
     - ContractsManager: Contract lifecycle and management operations
+    - UsersManager: User management and role assignment operations
     - WebhooksManager: Webhook management and delivery tracking
 """
 
@@ -69,6 +70,7 @@ from .projects import ProjectsManager
 from .sites import SiteManager
 from .tasks import TasksManager
 from .tickets import TicketManager
+from .users import UsersManager
 from .webhooks import WebhooksManager
 
 __all__ = [
@@ -88,6 +90,7 @@ __all__ = [
     "KnowledgeBaseArticleManager",
     "KnowledgeBaseCollectionManager",
     "ProjectsManager",
+    "UsersManager",
     "WebhooksManager",
 ]
 
@@ -104,6 +107,7 @@ MANAGER_REGISTRY = {
     "contracts": ContractsManager,
     "knowledge_base": KnowledgeBaseManager,
     "projects": ProjectsManager,
+    "users": UsersManager,
     "webhooks": WebhooksManager,
 }
 

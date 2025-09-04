@@ -205,6 +205,27 @@ class EntityType(str, Enum):
     KB_COLLECTION = "KB_COLLECTION"
 
 
+class UserRole(str, Enum):
+    """User role enumeration."""
+
+    ADMIN = "ADMIN"
+    TECHNICIAN = "TECHNICIAN"
+    USER = "USER"
+    MANAGER = "MANAGER"
+    READONLY = "READONLY"
+    BILLING = "BILLING"
+    DISPATCHER = "DISPATCHER"
+
+
+class UserStatus(str, Enum):
+    """User status enumeration."""
+
+    ACTIVE = "ACTIVE"
+    INACTIVE = "INACTIVE"
+    SUSPENDED = "SUSPENDED"
+    PENDING = "PENDING"
+
+
 class WebhookEvent(str, Enum):
     """Webhook event type enumeration."""
 
@@ -575,8 +596,11 @@ class ProjectMilestone(BaseModel):
 class ProjectTask(BaseModel):
     """Project task model."""
 
+    # Required fields first
     project_id: str
     name: str
+
+    # Optional fields with defaults
     milestone_id: Optional[str] = None
     description: Optional[str] = None
     status: TicketStatus = TicketStatus.OPEN
@@ -597,18 +621,61 @@ class ProjectTask(BaseModel):
 class ProjectTimeEntry(BaseModel):
     """Project time entry model."""
 
+    # Required fields first
     project_id: str
     user_id: str
     user_name: str
     description: str
     hours: float
     start_time: datetime
+
+    # Optional fields with defaults
     task_id: Optional[str] = None
     billable_hours: Optional[float] = None
     rate: Optional[float] = None
     end_time: Optional[datetime] = None
     is_billable: bool = True
     notes: Optional[str] = None
+
+
+# User Types
+@dataclass
+class User(BaseModel):
+    """User model."""
+
+    # Required fields first (from BaseModel and User-specific)
+    email: str
+    first_name: str
+    last_name: str
+    role: UserRole
+
+    # Optional fields with defaults
+    status: UserStatus = UserStatus.ACTIVE
+    department: Optional[str] = None
+    phone: Optional[str] = None
+    mobile: Optional[str] = None
+    job_title: Optional[str] = None
+    is_technician: bool = False
+    hourly_rate: Optional[float] = None
+    last_login_time: Optional[datetime] = None
+    last_login: Optional[str] = None  # Alternative field name for compatibility
+    timezone: Optional[str] = None
+    language: Optional[str] = None
+    avatar_url: Optional[str] = None
+    is_primary: bool = False
+    is_active_session: bool = False
+    employee_id: Optional[str] = None
+    hire_date: Optional[str] = None
+    manager_id: Optional[str] = None
+    notification_preferences: Dict[str, Any] = field(default_factory=dict)
+    permissions: List[str] = field(default_factory=list)
+    tags: List[str] = field(default_factory=list)
+    custom_fields: Dict[str, Any] = field(default_factory=dict)
+
+    @property
+    def full_name(self) -> str:
+        """Get full name."""
+        return f"{self.first_name} {self.last_name}".strip()
 
 
 # Knowledge Base Types
@@ -1005,6 +1072,26 @@ class TaskFilter:
 
 
 @dataclass
+class UserFilter:
+    """User query filter."""
+
+    email: Optional[str] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    role: Optional[UserRole] = None
+    status: Optional[UserStatus] = None
+    department: Optional[str] = None
+    job_title: Optional[str] = None
+    is_technician: Optional[bool] = None
+    is_primary: Optional[bool] = None
+    tags: Optional[List[str]] = None
+    created_after: Optional[datetime] = None
+    created_before: Optional[datetime] = None
+    last_login_after: Optional[datetime] = None
+    last_login_before: Optional[datetime] = None
+
+
+@dataclass
 class ContractFilter:
     """Contract query filter."""
 
@@ -1316,6 +1403,13 @@ class WebhookEventRecordsResponse(PaginatedResponse):
     items: List[WebhookEventRecord]
 
 
+@dataclass
+class UsersResponse(PaginatedResponse):
+    """Users query response."""
+
+    items: List[User]
+
+
 # Mutation Input Types
 @dataclass
 class ClientInput:
@@ -1515,8 +1609,11 @@ class ProjectMilestoneInput:
 class ProjectTaskInput:
     """Project task creation/update input."""
 
+    # Required fields first
     project_id: str
     name: str
+
+    # Optional fields with defaults
     milestone_id: Optional[str] = None
     description: Optional[str] = None
     status: Optional[TicketStatus] = None
@@ -1536,11 +1633,14 @@ class ProjectTaskInput:
 class ProjectTimeEntryInput:
     """Project time entry creation/update input."""
 
+    # Required fields first
     project_id: str
     user_id: str
     description: str
     hours: float
     start_time: datetime
+
+    # Optional fields with defaults
     task_id: Optional[str] = None
     billable_hours: Optional[float] = None
     rate: Optional[float] = None
@@ -1760,6 +1860,28 @@ class WebhookTestInput:
     webhook_id: str
     event_type: WebhookEvent
     test_payload: Optional[Dict[str, Any]] = None
+
+
+@dataclass
+class UserInput:
+    """User creation/update input."""
+
+    email: str
+    first_name: str
+    last_name: str
+    role: UserRole
+    status: Optional[UserStatus] = None
+    department: Optional[str] = None
+    phone: Optional[str] = None
+    job_title: Optional[str] = None
+    is_technician: Optional[bool] = None
+    hourly_rate: Optional[float] = None
+    timezone: Optional[str] = None
+    is_primary: Optional[bool] = None
+    notification_preferences: Optional[Dict[str, Any]] = None
+    permissions: Optional[List[str]] = None
+    tags: Optional[List[str]] = None
+    custom_fields: Optional[Dict[str, Any]] = None
 
 
 # Utility Functions

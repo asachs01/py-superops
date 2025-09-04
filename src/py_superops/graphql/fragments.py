@@ -742,6 +742,24 @@ ATTACHMENT_CORE_FIELDS = GraphQLFragment(
     dependencies={"BaseFields"},
 )
 
+# User fragments
+USER_CORE_FIELDS = GraphQLFragment(
+    name="UserCoreFields",
+    on_type="User",
+    fields="""
+    ...BaseFields
+    email
+    firstName
+    lastName
+    role
+    status
+    department
+    jobTitle
+    isTechnician
+    """,
+    dependencies={"BaseFields"},
+)
+
 # Webhook fragments
 WEBHOOK_CORE_FIELDS = GraphQLFragment(
     name="WebhookCoreFields",
@@ -783,6 +801,40 @@ ATTACHMENT_SUMMARY_FIELDS = GraphQLFragment(
     version
     uploadedByName
     createdAt
+    """,
+)
+
+USER_FULL_FIELDS = GraphQLFragment(
+    name="UserFullFields",
+    on_type="User",
+    fields="""
+    ...UserCoreFields
+    phone
+    hourlyRate
+    lastLoginTime
+    timezone
+    avatarUrl
+    isPrimary
+    notificationPreferences
+    permissions
+    tags
+    customFields
+    """,
+    dependencies={"UserCoreFields"},
+)
+
+USER_SUMMARY_FIELDS = GraphQLFragment(
+    name="UserSummaryFields",
+    on_type="User",
+    fields="""
+    id
+    email
+    firstName
+    lastName
+    role
+    status
+    department
+    isTechnician
     """,
 )
 
@@ -908,6 +960,9 @@ ALL_FRAGMENTS = {
         ATTACHMENT_CORE_FIELDS,
         ATTACHMENT_FULL_FIELDS,
         ATTACHMENT_SUMMARY_FIELDS,
+        USER_CORE_FIELDS,
+        USER_FULL_FIELDS,
+        USER_SUMMARY_FIELDS,
         WEBHOOK_CORE_FIELDS,
         WEBHOOK_FULL_FIELDS,
         WEBHOOK_SUMMARY_FIELDS,
@@ -991,6 +1046,12 @@ ATTACHMENT_FRAGMENTS = {
     "core": ATTACHMENT_CORE_FIELDS,
     "full": ATTACHMENT_FULL_FIELDS,
     "summary": ATTACHMENT_SUMMARY_FIELDS,
+}
+
+USER_FRAGMENTS = {
+    "core": USER_CORE_FIELDS,
+    "full": USER_FULL_FIELDS,
+    "summary": USER_SUMMARY_FIELDS,
 }
 
 WEBHOOK_FRAGMENTS = {
@@ -1330,6 +1391,24 @@ def get_attachment_fields(detail_level: str = "core") -> Set[str]:
     }
 
     return mapping.get(detail_level, {"AttachmentCoreFields"})
+
+
+def get_user_fields(detail_level: str = "core") -> Set[str]:
+    """Get user fragment names for specified detail level.
+
+    Args:
+        detail_level: Level of detail (summary, core, full)
+
+    Returns:
+        Set of fragment names
+    """
+    mapping = {
+        "summary": {"UserSummaryFields"},
+        "core": {"UserCoreFields"},
+        "full": {"UserFullFields"},
+    }
+
+    return mapping.get(detail_level, {"UserCoreFields"})
 
 
 def get_webhook_fields(

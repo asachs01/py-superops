@@ -20,6 +20,7 @@ from .fragments import (
     get_project_fields,
     get_task_fields,
     get_ticket_fields,
+    get_user_fields,
 )
 from .types import (
     AssetFilter,
@@ -37,6 +38,8 @@ from .types import (
     TaskFilter,
     TicketFilter,
     TicketInput,
+    UserFilter,
+    UserInput,
     serialize_filter_value,
     serialize_input,
 )
@@ -952,6 +955,127 @@ class AssetQueryBuilder(SelectionQueryBuilder):
         return self.build("asset", "id: $id")
 
 
+class UserQueryBuilder(SelectionQueryBuilder):
+    """Builder for user-related queries."""
+
+    def __init__(self, detail_level: str = "core"):
+        """Initialize user query builder.
+
+        Args:
+            detail_level: Level of detail (summary, core, full)
+        """
+        super().__init__()
+        self.detail_level = detail_level
+        self.add_fragments(get_user_fields(detail_level))
+
+    def list_users(
+        self,
+        filter_obj: Optional[UserFilter] = None,
+        pagination: Optional[PaginationArgs] = None,
+        sort: Optional[SortArgs] = None,
+    ) -> "UserQueryBuilder":
+        """Build a list users query.
+
+        Args:
+            filter_obj: User filter
+            pagination: Pagination arguments
+            sort: Sort arguments
+
+        Returns:
+            Self for chaining
+        """
+        # Build arguments
+        args = []
+
+        if filter_obj:
+            self.add_variable("filter", "UserFilter", serialize_input(filter_obj))
+            args.append("filter: $filter")
+
+        if pagination:
+            self.add_variable("page", "Int", pagination.page)
+            self.add_variable("pageSize", "Int", pagination.pageSize)
+            args.append("page: $page, pageSize: $pageSize")
+
+        if sort:
+            self.add_variable("sortField", "String", sort.field)
+            self.add_variable("sortDirection", "SortDirection", sort.direction)
+            args.append("sortField: $sortField, sortDirection: $sortDirection")
+
+        # Add selections
+        fragment_name = list(get_user_fields(self.detail_level))[0]
+        fragment_spread = f"...{fragment_name}"
+
+        return (
+            self.add_selection(
+                f"""items {{
+  {fragment_spread}
+}}"""
+            )
+            .add_selection(
+                """pagination {
+  ...PaginationInfo
+}"""
+            )
+            .add_fragment("PaginationInfo")
+        )
+
+    def get_user(self, user_id: str) -> "UserQueryBuilder":
+        """Build a get user by ID query.
+
+        Args:
+            user_id: User ID
+
+        Returns:
+            Self for chaining
+        """
+        self.add_variable("id", "ID!", user_id)
+        fragment_name = list(get_user_fields(self.detail_level))[0]
+        fragment_spread = f"...{fragment_name}"
+        return self.add_selection(fragment_spread)
+
+    def build_list(
+        self,
+        filter_obj: Optional[UserFilter] = None,
+        pagination: Optional[PaginationArgs] = None,
+        sort: Optional[SortArgs] = None,
+    ) -> str:
+        """Build complete list users query.
+
+        Args:
+            filter_obj: User filter
+            pagination: Pagination arguments
+            sort: Sort arguments
+
+        Returns:
+            Complete GraphQL query string
+        """
+        self.list_users(filter_obj, pagination, sort)
+
+        # Build args list for query
+        args_list = []
+        if filter_obj:
+            args_list.append("filter: $filter")
+        if pagination:
+            args_list.extend(["page: $page", "pageSize: $pageSize"])
+        if sort:
+            args_list.extend(["sortField: $sortField", "sortDirection: $sortDirection"])
+
+        args = ", ".join(args_list)
+        return self.build("users", args)
+
+    def build_get(self, user_id: str) -> str:
+        """Build complete get user query.
+
+        Args:
+            user_id: User ID
+
+        Returns:
+            Complete GraphQL query string
+        """
+        self.get_user(user_id)
+        return self.build("user", "id: $id")
+
+
 class ProjectQueryBuilder(SelectionQueryBuilder):
     """Builder for project-related queries."""
 
@@ -1450,6 +1574,64 @@ class CommentMutationBuilder(MutationBuilder):
         return self.create_comment(input_data)
 
 
+class UserMutationBuilder(MutationBuilder):
+    """Builder for user mutations."""
+
+    def __init__(self, detail_level: str = "core"):
+        """Initialize user mutation builder.
+
+        Args:
+            detail_level: Level of detail for returned fields
+        """
+        super().__init__()
+        self.detail_level = detail_level
+        fragment_names = get_user_fields(detail_level)
+        self.add_fragments(fragment_names)
+
+        # Add return fields
+        main_fragment = list(fragment_names)[0]
+        self.return_field(f"...{main_fragment}")
+
+    def create_user(self, input_data: UserInput) -> str:
+        """Build create user mutation.
+
+        Args:
+            input_data: User input data
+
+        Returns:
+            Complete GraphQL mutation string
+        """
+        self.add_variable("input", "UserInput!", serialize_input(input_data))
+        return self.mutation_field("createUser", "input: $input").build()
+
+    def update_user(self, user_id: str, input_data: UserInput) -> str:
+        """Build update user mutation.
+
+        Args:
+            user_id: User ID
+            input_data: User input data
+
+        Returns:
+            Complete GraphQL mutation string
+        """
+        self.add_variable("id", "ID!", user_id)
+        self.add_variable("input", "UserInput!", serialize_input(input_data))
+        return self.mutation_field("updateUser", "id: $id, input: $input").build()
+
+    def delete_user(self, user_id: str) -> str:
+        """Build delete user mutation.
+
+        Args:
+            user_id: User ID
+
+        Returns:
+            Complete GraphQL mutation string
+        """
+        self.add_variable("id", "ID!", user_id)
+        self._return_fields = ["success", "message"]  # Override return fields
+        return self.mutation_field("deleteUser", "id: $id").build()
+
+
 # Factory functions for easy builder creation
 def create_client_query_builder(detail_level: str = "core") -> ClientQueryBuilder:
     """Create a client query builder.
@@ -1593,9 +1775,33 @@ def create_comment_mutation_builder(detail_level: str = "core") -> CommentMutati
     """Create a comment mutation builder.
 
     Args:
-        detail_level: Level of detail for returned fields
+        detail_level: Level of detail (summary, core, full)
 
     Returns:
         CommentMutationBuilder instance
     """
     return CommentMutationBuilder(detail_level)
+
+
+def create_user_query_builder(detail_level: str = "core") -> UserQueryBuilder:
+    """Create a user query builder.
+
+    Args:
+        detail_level: Level of detail (summary, core, full)
+
+    Returns:
+        UserQueryBuilder instance
+    """
+    return UserQueryBuilder(detail_level)
+
+
+def create_user_mutation_builder(detail_level: str = "core") -> UserMutationBuilder:
+    """Create a user mutation builder.
+
+    Args:
+        detail_level: Level of detail for returned fields
+
+    Returns:
+        UserMutationBuilder instance
+    """
+    return UserMutationBuilder(detail_level)

@@ -55,6 +55,8 @@ from .builder import (  # Base builders; Specific builders; Factory functions
     SelectionQueryBuilder,
     TicketMutationBuilder,
     TicketQueryBuilder,
+    UserMutationBuilder,
+    UserQueryBuilder,
     create_asset_query_builder,
     create_client_mutation_builder,
     create_client_query_builder,
@@ -64,6 +66,8 @@ from .builder import (  # Base builders; Specific builders; Factory functions
     create_project_query_builder,
     create_ticket_mutation_builder,
     create_ticket_query_builder,
+    create_user_mutation_builder,
+    create_user_query_builder,
 )
 
 # GraphQL fragments
@@ -114,6 +118,10 @@ from .fragments import (  # Individual fragments; Fragment collections; Utility 
     TICKET_FRAGMENTS,
     TICKET_FULL_FIELDS,
     TICKET_SUMMARY_FIELDS,
+    USER_CORE_FIELDS,
+    USER_FRAGMENTS,
+    USER_FULL_FIELDS,
+    USER_SUMMARY_FIELDS,
     WEBHOOK_CORE_FIELDS,
     WEBHOOK_DELIVERY_FIELDS,
     WEBHOOK_EVENT_RECORD_FIELDS,
@@ -130,6 +138,7 @@ from .fragments import (  # Individual fragments; Fragment collections; Utility 
     get_kb_fields,
     get_project_fields,
     get_ticket_fields,
+    get_user_fields,
     get_webhook_fields,
     resolve_dependencies,
 )
@@ -202,6 +211,12 @@ from .types import (  # Base types; Enums; Models; Filters; Input types for muta
     TicketPriority,
     TicketsResponse,
     TicketStatus,
+    User,
+    UserFilter,
+    UserInput,
+    UserRole,
+    UsersResponse,
+    UserStatus,
     Webhook,
     WebhookDeliveriesResponse,
     WebhookDelivery,
@@ -259,6 +274,7 @@ __all__ = [
     "ProjectTimeEntry",
     "KnowledgeBaseCollection",
     "KnowledgeBaseArticle",
+    "User",
     "Webhook",
     "WebhookDelivery",
     "WebhookEventRecord",
@@ -267,6 +283,7 @@ __all__ = [
     "AssetFilter",
     "ContractFilter",
     "ProjectFilter",
+    "UserFilter",
     "WebhookFilter",
     "WebhookDeliveryFilter",
     "ClientInput",
@@ -280,6 +297,7 @@ __all__ = [
     "ContractRateInput",
     "KnowledgeBaseCollectionInput",
     "KnowledgeBaseArticleInput",
+    "UserInput",
     "PaginatedResponse",
     "ClientsResponse",
     "TicketsResponse",
@@ -292,6 +310,7 @@ __all__ = [
     "ContractRatesResponse",
     "KnowledgeBaseCollectionsResponse",
     "KnowledgeBaseArticlesResponse",
+    "UsersResponse",
     "WebhooksResponse",
     "WebhookDeliveriesResponse",
     "WebhookEventRecordsResponse",
@@ -346,6 +365,16 @@ __all__ = [
     "CONTRACT_SLA_FIELDS",
     "CONTRACT_RATE_FIELDS",
     "CONTRACT_FRAGMENTS",
+    "USER_CORE_FIELDS",
+    "USER_FULL_FIELDS",
+    "USER_SUMMARY_FIELDS",
+    "USER_FRAGMENTS",
+    "WEBHOOK_CORE_FIELDS",
+    "WEBHOOK_FULL_FIELDS",
+    "WEBHOOK_SUMMARY_FIELDS",
+    "WEBHOOK_DELIVERY_FIELDS",
+    "WEBHOOK_EVENT_RECORD_FIELDS",
+    "WEBHOOK_FRAGMENTS",
     "resolve_dependencies",
     "build_fragments_string",
     "get_fragment_spreads",
@@ -357,6 +386,8 @@ __all__ = [
     "get_kb_fields",
     "get_contract_fields",
     "get_project_fields",
+    "get_user_fields",
+    "get_webhook_fields",
     # Builders
     "QueryBuilder",
     "SelectionQueryBuilder",
@@ -367,9 +398,11 @@ __all__ = [
     "TicketQueryBuilder",
     "AssetQueryBuilder",
     "ProjectQueryBuilder",
+    "UserQueryBuilder",
     "ClientMutationBuilder",
     "TicketMutationBuilder",
     "ProjectMutationBuilder",
+    "UserMutationBuilder",
     "create_client_query_builder",
     "create_comment_query_builder",
     "create_comment_mutation_builder",
@@ -379,6 +412,8 @@ __all__ = [
     "create_client_mutation_builder",
     "create_ticket_mutation_builder",
     "create_project_mutation_builder",
+    "create_user_query_builder",
+    "create_user_mutation_builder",
     # Queries
     "CommonQueries",
     "SuperOpsQueries",
@@ -642,6 +677,48 @@ def build_contract_list_query(
         variables["sort"] = serialize_input(sort_args)
 
     return query.strip(), variables
+
+
+def build_user_list_query(
+    role: UserRole = None,
+    status: UserStatus = None,
+    department: str = None,
+    page: int = 1,
+    page_size: int = 50,
+    detail_level: str = "core",
+) -> tuple[str, dict]:
+    """Build a user list query with common filters.
+
+    Args:
+        role: User role filter
+        status: User status filter
+        department: Department filter
+        page: Page number
+        page_size: Items per page
+        detail_level: Level of detail (summary, core, full)
+
+    Returns:
+        Tuple of (query string, variables dict)
+    """
+    builder = create_user_query_builder(detail_level)
+
+    # Build filter
+    filter_kwargs = {}
+    if role:
+        filter_kwargs["role"] = role
+    if status:
+        filter_kwargs["status"] = status
+    if department:
+        filter_kwargs["department"] = department
+
+    user_filter = UserFilter(**filter_kwargs) if filter_kwargs else None
+    pagination = PaginationArgs(page=page, pageSize=page_size)
+    sort_args = SortArgs(field="last_name", direction="ASC")
+
+    query = builder.build_list(filter_obj=user_filter, pagination=pagination, sort=sort_args)
+    variables = builder.get_variables()
+
+    return query, variables
 
 
 # Package information

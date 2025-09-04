@@ -114,6 +114,7 @@ try:
         SiteManager,
         TasksManager,
         TicketManager,
+        UsersManager,
         WebhooksManager,
     )
 
@@ -142,11 +143,14 @@ try:
         SuperOpsQueries,
         TicketPriority,
         TicketStatus,
+        UserRole,
+        UserStatus,
         build_asset_list_query,
         build_client_list_query,
         build_contract_list_query,
         build_project_list_query,
         build_ticket_list_query,
+        build_user_list_query,
     )
 
     _GRAPHQL_AVAILABLE = True
@@ -194,6 +198,7 @@ __all__ = [
             "KnowledgeBaseArticleManager",
             "KnowledgeBaseCollectionManager",
             "ProjectsManager",
+            "UsersManager",
             "WebhooksManager",
         ]
         if _MANAGERS_AVAILABLE
@@ -216,6 +221,8 @@ __all__ = [
             "SLALevel",
             "ProjectStatus",
             "ProjectPriority",
+            "UserRole",
+            "UserStatus",
             "PaginationArgs",
             "SortArgs",
             "CommonQueries",
@@ -225,6 +232,7 @@ __all__ = [
             "build_asset_list_query",
             "build_contract_list_query",
             "build_project_list_query",
+            "build_user_list_query",
         ]
         if _GRAPHQL_AVAILABLE
         else []
