@@ -2431,6 +2431,64 @@ class AlertStatus(str, Enum):
     SILENCED = "SILENCED"
 
 
+# Scripts Enums
+class ScriptType(str, Enum):
+    """Script type enumeration."""
+
+    POWERSHELL = "POWERSHELL"
+    BASH = "BASH"
+    PYTHON = "PYTHON"
+    BATCH = "BATCH"
+    JAVASCRIPT = "JAVASCRIPT"
+    VBS = "VBS"
+    CUSTOM = "CUSTOM"
+
+
+class ExecutionStatus(str, Enum):
+    """Script execution status enumeration."""
+
+    PENDING = "PENDING"
+    RUNNING = "RUNNING"
+    SUCCESS = "SUCCESS"
+    FAILED = "FAILED"
+    TIMEOUT = "TIMEOUT"
+    CANCELLED = "CANCELLED"
+    PARTIAL_SUCCESS = "PARTIAL_SUCCESS"
+
+
+class ScriptCategory(str, Enum):
+    """Script category enumeration."""
+
+    MONITORING = "MONITORING"
+    MAINTENANCE = "MAINTENANCE"
+    DEPLOYMENT = "DEPLOYMENT"
+    BACKUP = "BACKUP"
+    SECURITY = "SECURITY"
+    REPORTING = "REPORTING"
+    AUTOMATION = "AUTOMATION"
+    DIAGNOSTIC = "DIAGNOSTIC"
+    CUSTOM = "CUSTOM"
+
+
+class DeploymentStatus(str, Enum):
+    """Script deployment status enumeration."""
+
+    DRAFT = "DRAFT"
+    ACTIVE = "ACTIVE"
+    INACTIVE = "INACTIVE"
+    DEPRECATED = "DEPRECATED"
+    ARCHIVED = "ARCHIVED"
+
+
+class ExecutionTrigger(str, Enum):
+    """Script execution trigger enumeration."""
+
+    MANUAL = "MANUAL"
+    SCHEDULED = "SCHEDULED"
+    EVENT_DRIVEN = "EVENT_DRIVEN"
+    CONDITION_BASED = "CONDITION_BASED"
+
+
 # Monitoring Data Classes
 @dataclass
 class MonitoringAgent:

@@ -50,6 +50,7 @@ Available Managers:
     - CommentsManager: Comment management and threaded conversations
     - KnowledgeBaseManager: Knowledge base articles and collections
     - ProjectsManager: Project management and tracking
+    - ScriptsManager: Script management, execution, and deployment operations
     - ContractsManager: Contract lifecycle and management operations
     - UsersManager: User management and role assignment operations
     - WebhooksManager: Webhook management and delivery tracking
@@ -69,6 +70,7 @@ from .knowledge_base import (
     KnowledgeBaseManager,
 )
 from .projects import ProjectsManager
+from .scripts_manager import ScriptsManager
 from .sites import SiteManager
 from .tasks import TasksManager
 from .tickets import TicketManager
@@ -94,6 +96,7 @@ __all__ = [
     "KnowledgeBaseArticleManager",
     "KnowledgeBaseCollectionManager",
     "ProjectsManager",
+    "ScriptsManager",
     "TimeEntriesManager",
     "UsersManager",
     "WebhooksManager",
@@ -113,6 +116,7 @@ MANAGER_REGISTRY = {
     "contracts": ContractsManager,
     "knowledge_base": KnowledgeBaseManager,
     "projects": ProjectsManager,
+    "scripts": ScriptsManager,
     "time_entries": TimeEntriesManager,
     "users": UsersManager,
     "webhooks": WebhooksManager,
