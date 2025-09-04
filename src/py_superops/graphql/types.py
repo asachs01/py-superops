@@ -322,6 +322,74 @@ class TimerState(str, Enum):
     PAUSED = "PAUSED"
 
 
+class AutomationTriggerType(str, Enum):
+    """Automation trigger type enumeration."""
+
+    SCHEDULED = "SCHEDULED"
+    EVENT_BASED = "EVENT_BASED"
+    WEBHOOK = "WEBHOOK"
+    MANUAL = "MANUAL"
+    CONDITION_BASED = "CONDITION_BASED"
+
+
+class AutomationJobStatus(str, Enum):
+    """Automation job status enumeration."""
+
+    PENDING = "PENDING"
+    RUNNING = "RUNNING"
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
+    CANCELLED = "CANCELLED"
+    SKIPPED = "SKIPPED"
+    RETRYING = "RETRYING"
+
+
+class AutomationWorkflowStatus(str, Enum):
+    """Automation workflow status enumeration."""
+
+    ACTIVE = "ACTIVE"
+    INACTIVE = "INACTIVE"
+    DRAFT = "DRAFT"
+    ARCHIVED = "ARCHIVED"
+
+
+class ScheduleType(str, Enum):
+    """Schedule type enumeration."""
+
+    ONCE = "ONCE"
+    RECURRING = "RECURRING"
+    CRON = "CRON"
+    INTERVAL = "INTERVAL"
+
+
+class RecurrenceFrequency(str, Enum):
+    """Recurrence frequency enumeration."""
+
+    DAILY = "DAILY"
+    WEEKLY = "WEEKLY"
+    MONTHLY = "MONTHLY"
+    YEARLY = "YEARLY"
+    HOURLY = "HOURLY"
+
+
+class ActionType(str, Enum):
+    """Automation action type enumeration."""
+
+    SEND_EMAIL = "SEND_EMAIL"
+    CREATE_TICKET = "CREATE_TICKET"
+    UPDATE_TICKET = "UPDATE_TICKET"
+    ASSIGN_TICKET = "ASSIGN_TICKET"
+    CLOSE_TICKET = "CLOSE_TICKET"
+    SEND_NOTIFICATION = "SEND_NOTIFICATION"
+    CREATE_TASK = "CREATE_TASK"
+    UPDATE_ASSET = "UPDATE_ASSET"
+    RUN_SCRIPT = "RUN_SCRIPT"
+    WEBHOOK_CALL = "WEBHOOK_CALL"
+    CONDITION_CHECK = "CONDITION_CHECK"
+    DELAY = "DELAY"
+    CUSTOM_ACTION = "CUSTOM_ACTION"
+
+
 # Base Models
 @dataclass
 class BaseModel:
@@ -974,10 +1042,13 @@ class TimeEntry(BaseModel):
 class Timer(BaseModel):
     """Timer model for active time tracking."""
 
+    # Required fields first
     user_id: str
-    time_entry_id: Optional[str] = None
     description: str
     start_time: datetime
+
+    # Optional fields with defaults
+    time_entry_id: Optional[str] = None
     paused_time: Optional[datetime] = None
     total_paused_duration: int = 0  # minutes
     current_duration: Optional[int] = None  # calculated field in minutes
@@ -1268,7 +1339,7 @@ class AttachmentFilter:
     version: Optional[int] = None
 
 
-@dataclass  
+@dataclass
 class TimerFilter:
     """Timer query filter."""
 
@@ -2098,6 +2169,198 @@ class TimeEntryApprovalInput:
     time_entry_ids: List[str]
     status: TimeEntryStatus
     approval_notes: Optional[str] = None
+
+
+# Automation Models
+@dataclass
+class AutomationAction(BaseModel):
+    """Automation action model."""
+
+    name: str
+    action_type: ActionType
+    config: Dict[str, Any]
+    order_index: int = 0
+    is_enabled: bool = True
+    condition: Optional[str] = None
+    timeout_seconds: Optional[int] = None
+    retry_attempts: Optional[int] = None
+    retry_delay_seconds: Optional[int] = None
+
+
+@dataclass
+class AutomationSchedule(BaseModel):
+    """Automation schedule model."""
+
+    schedule_type: ScheduleType
+    cron_expression: Optional[str] = None
+    interval_seconds: Optional[int] = None
+    recurrence_frequency: Optional[RecurrenceFrequency] = None
+    recurrence_count: Optional[int] = None
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
+    timezone: Optional[str] = None
+    is_active: bool = True
+
+
+@dataclass
+class AutomationTrigger(BaseModel):
+    """Automation trigger model."""
+
+    name: str
+    trigger_type: AutomationTriggerType
+    config: Dict[str, Any]
+    conditions: Optional[Dict[str, Any]] = None
+    is_enabled: bool = True
+    schedule: Optional[AutomationSchedule] = None
+    workflow_id: Optional[str] = None
+
+
+@dataclass
+class AutomationJob(BaseModel):
+    """Automation job execution model."""
+
+    workflow_id: str
+    trigger_id: Optional[str] = None
+    status: AutomationJobStatus = AutomationJobStatus.PENDING
+    started_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+    failed_at: Optional[datetime] = None
+    error_message: Optional[str] = None
+    execution_log: List[str] = field(default_factory=list)
+    input_data: Optional[Dict[str, Any]] = None
+    output_data: Optional[Dict[str, Any]] = None
+    retry_count: int = 0
+    max_retries: int = 3
+    scheduled_at: Optional[datetime] = None
+    priority: int = 0
+
+
+@dataclass
+class AutomationWorkflow(BaseModel):
+    """Automation workflow model."""
+
+    name: str
+    description: Optional[str] = None
+    status: AutomationWorkflowStatus = AutomationWorkflowStatus.DRAFT
+    version: str = "1.0.0"
+    tags: List[str] = field(default_factory=list)
+    is_template: bool = False
+    template_id: Optional[str] = None
+
+    # Workflow execution
+    actions: List[AutomationAction] = field(default_factory=list)
+    triggers: List[AutomationTrigger] = field(default_factory=list)
+
+    # Configuration
+    max_concurrent_jobs: int = 1
+    timeout_seconds: Optional[int] = None
+    retry_failed_actions: bool = True
+
+    # Metadata
+    created_by: Optional[str] = None
+    last_modified_by: Optional[str] = None
+    last_run_at: Optional[datetime] = None
+    next_run_at: Optional[datetime] = None
+    total_runs: int = 0
+    successful_runs: int = 0
+    failed_runs: int = 0
+
+    # Template-specific fields
+    template_variables: Optional[Dict[str, Any]] = None
+    template_description: Optional[str] = None
+    template_category: Optional[str] = None
+
+
+# Automation Input Models
+@dataclass
+class AutomationWorkflowInput:
+    """Automation workflow creation/update input."""
+
+    name: str
+    description: Optional[str] = None
+    status: Optional[AutomationWorkflowStatus] = None
+    tags: Optional[List[str]] = None
+    is_template: Optional[bool] = None
+    template_id: Optional[str] = None
+
+    # Configuration
+    max_concurrent_jobs: Optional[int] = None
+    timeout_seconds: Optional[int] = None
+    retry_failed_actions: Optional[bool] = None
+
+    # Template-specific
+    template_variables: Optional[Dict[str, Any]] = None
+    template_description: Optional[str] = None
+    template_category: Optional[str] = None
+
+
+@dataclass
+class AutomationActionInput:
+    """Automation action creation/update input."""
+
+    name: str
+    action_type: ActionType
+    config: Dict[str, Any]
+    workflow_id: str
+    order_index: Optional[int] = None
+    is_enabled: Optional[bool] = None
+    condition: Optional[str] = None
+    timeout_seconds: Optional[int] = None
+    retry_attempts: Optional[int] = None
+    retry_delay_seconds: Optional[int] = None
+
+
+@dataclass
+class AutomationTriggerInput:
+    """Automation trigger creation/update input."""
+
+    name: str
+    trigger_type: AutomationTriggerType
+    config: Dict[str, Any]
+    workflow_id: str
+    conditions: Optional[Dict[str, Any]] = None
+    is_enabled: Optional[bool] = None
+
+
+@dataclass
+class AutomationScheduleInput:
+    """Automation schedule creation/update input."""
+
+    schedule_type: ScheduleType
+    trigger_id: str
+    cron_expression: Optional[str] = None
+    interval_seconds: Optional[int] = None
+    recurrence_frequency: Optional[RecurrenceFrequency] = None
+    recurrence_count: Optional[int] = None
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
+    timezone: Optional[str] = None
+    is_active: Optional[bool] = None
+
+
+@dataclass
+class AutomationJobInput:
+    """Automation job creation input."""
+
+    workflow_id: str
+    trigger_id: Optional[str] = None
+    input_data: Optional[Dict[str, Any]] = None
+    priority: Optional[int] = None
+    scheduled_at: Optional[datetime] = None
+    max_retries: Optional[int] = None
+
+
+@dataclass
+class AutomationExecutionInput:
+    """Automation workflow execution input."""
+
+    workflow_id: str
+    input_data: Optional[Dict[str, Any]] = None
+    trigger_id: Optional[str] = None
+    priority: Optional[int] = None
+    async_execution: bool = True
+    wait_for_completion: bool = False
+    timeout_seconds: Optional[int] = None
 
 
 # Utility Functions

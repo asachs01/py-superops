@@ -40,6 +40,7 @@ Example:
     ```
 
 Available Managers:
+    - AutomationManager: Automation workflow management with job execution and scheduling
     - ClientManager: Client/customer management and workflows
     - TicketManager: Ticket lifecycle and workflow operations
     - TasksManager: Task management with project linking and time tracking
@@ -56,6 +57,7 @@ Available Managers:
 
 from .assets import AssetManager
 from .attachments import AttachmentsManager
+from .automation_manager import AutomationManager
 from .base import ResourceManager
 from .clients import ClientManager
 from .comments import CommentsManager
@@ -78,6 +80,7 @@ __all__ = [
     # Base manager
     "ResourceManager",
     # Domain-specific managers
+    "AutomationManager",
     "ClientManager",
     "TicketManager",
     "TasksManager",
@@ -98,6 +101,7 @@ __all__ = [
 
 # Manager registry for dynamic access
 MANAGER_REGISTRY = {
+    "automation": AutomationManager,
     "clients": ClientManager,
     "tickets": TicketManager,
     "tasks": TasksManager,
