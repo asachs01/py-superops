@@ -1011,6 +1011,199 @@ WEBHOOK_EVENT_RECORD_FIELDS = GraphQLFragment(
     dependencies={"BaseFields"},
 )
 
+# Monitoring fragments (moved here to be available for ALL_FRAGMENTS)
+MONITORING_AGENT_CORE_FIELDS = GraphQLFragment(
+    name="MonitoringAgentCoreFields",
+    on_type="MonitoringAgent",
+    fields="""
+    ...BaseFields
+    name
+    description
+    status
+    version
+    hostId
+    hostName
+    ipAddress
+    port
+    lastSeen
+    """,
+    dependencies={"BaseFields"},
+)
+
+MONITORING_AGENT_FULL_FIELDS = GraphQLFragment(
+    name="MonitoringAgentFullFields",
+    on_type="MonitoringAgent",
+    fields="""
+    ...MonitoringAgentCoreFields
+    apiKey
+    config
+    tags
+    installedAt
+    createdBy
+    metadata
+    """,
+    dependencies={"MonitoringAgentCoreFields"},
+)
+
+MONITORING_AGENT_SUMMARY_FIELDS = GraphQLFragment(
+    name="MonitoringAgentSummaryFields",
+    on_type="MonitoringAgent",
+    fields="""
+    id
+    name
+    status
+    hostName
+    lastSeen
+    """,
+)
+
+MONITORING_CHECK_CORE_FIELDS = GraphQLFragment(
+    name="MonitoringCheckCoreFields",
+    on_type="MonitoringCheck",
+    fields="""
+    ...BaseFields
+    name
+    description
+    checkType
+    target
+    status
+    enabled
+    interval
+    timeout
+    retryCount
+    agentId
+    siteId
+    assetId
+    lastCheck
+    nextCheck
+    """,
+    dependencies={"BaseFields"},
+)
+
+MONITORING_CHECK_FULL_FIELDS = GraphQLFragment(
+    name="MonitoringCheckFullFields",
+    on_type="MonitoringCheck",
+    fields="""
+    ...MonitoringCheckCoreFields
+    config
+    thresholds
+    tags
+    lastResult
+    createdBy
+    metadata
+    """,
+    dependencies={"MonitoringCheckCoreFields"},
+)
+
+MONITORING_CHECK_SUMMARY_FIELDS = GraphQLFragment(
+    name="MonitoringCheckSummaryFields",
+    on_type="MonitoringCheck",
+    fields="""
+    id
+    name
+    checkType
+    status
+    target
+    lastCheck
+    """,
+)
+
+MONITORING_ALERT_CORE_FIELDS = GraphQLFragment(
+    name="MonitoringAlertCoreFields",
+    on_type="MonitoringAlert",
+    fields="""
+    ...BaseFields
+    name
+    description
+    checkId
+    severity
+    status
+    triggeredAt
+    acknowledgedAt
+    acknowledgedBy
+    resolvedAt
+    resolvedBy
+    alertCount
+    lastAlert
+    """,
+    dependencies={"BaseFields"},
+)
+
+MONITORING_ALERT_FULL_FIELDS = GraphQLFragment(
+    name="MonitoringAlertFullFields",
+    on_type="MonitoringAlert",
+    fields="""
+    ...MonitoringAlertCoreFields
+    condition
+    notificationConfig
+    suppressionRules
+    escalationRules
+    tags
+    silencedUntil
+    createdBy
+    metadata
+    """,
+    dependencies={"MonitoringAlertCoreFields"},
+)
+
+MONITORING_ALERT_SUMMARY_FIELDS = GraphQLFragment(
+    name="MonitoringAlertSummaryFields",
+    on_type="MonitoringAlert",
+    fields="""
+    id
+    name
+    severity
+    status
+    triggeredAt
+    alertCount
+    """,
+)
+
+MONITORING_METRIC_CORE_FIELDS = GraphQLFragment(
+    name="MonitoringMetricCoreFields",
+    on_type="MonitoringMetric",
+    fields="""
+    ...BaseFields
+    name
+    description
+    metricType
+    unit
+    value
+    timestamp
+    agentId
+    checkId
+    assetId
+    siteId
+    """,
+    dependencies={"BaseFields"},
+)
+
+MONITORING_METRIC_FULL_FIELDS = GraphQLFragment(
+    name="MonitoringMetricFullFields",
+    on_type="MonitoringMetric",
+    fields="""
+    ...MonitoringMetricCoreFields
+    labels
+    retentionPeriod
+    aggregationConfig
+    tags
+    metadata
+    """,
+    dependencies={"MonitoringMetricCoreFields"},
+)
+
+MONITORING_METRIC_SUMMARY_FIELDS = GraphQLFragment(
+    name="MonitoringMetricSummaryFields",
+    on_type="MonitoringMetric",
+    fields="""
+    id
+    name
+    value
+    unit
+    timestamp
+    """,
+)
+
 # Fragment collections for easy access
 ALL_FRAGMENTS = {
     fragment.name: fragment
@@ -1074,6 +1267,18 @@ ALL_FRAGMENTS = {
         TIME_ENTRY_SUMMARY_FIELDS,
         TIMER_FIELDS,
         TIME_ENTRY_TEMPLATE_FIELDS,
+        MONITORING_AGENT_CORE_FIELDS,
+        MONITORING_AGENT_FULL_FIELDS,
+        MONITORING_AGENT_SUMMARY_FIELDS,
+        MONITORING_CHECK_CORE_FIELDS,
+        MONITORING_CHECK_FULL_FIELDS,
+        MONITORING_CHECK_SUMMARY_FIELDS,
+        MONITORING_ALERT_CORE_FIELDS,
+        MONITORING_ALERT_FULL_FIELDS,
+        MONITORING_ALERT_SUMMARY_FIELDS,
+        MONITORING_METRIC_CORE_FIELDS,
+        MONITORING_METRIC_FULL_FIELDS,
+        MONITORING_METRIC_SUMMARY_FIELDS,
     ]
 }
 
@@ -1596,3 +1801,325 @@ def get_time_entry_template_fields() -> Set[str]:
         Set of fragment names
     """
     return {"TimeEntryTemplateFields"}
+
+
+# Monitoring fragment collections for easy access
+MONITORING_FRAGMENTS = {
+    # Agent fragments
+    "core": MONITORING_AGENT_CORE_FIELDS,
+    "full": MONITORING_AGENT_FULL_FIELDS,
+    "summary": MONITORING_AGENT_SUMMARY_FIELDS,
+    # Check fragments
+    "check_core": MONITORING_CHECK_CORE_FIELDS,
+    "check_full": MONITORING_CHECK_FULL_FIELDS,
+    "check_summary": MONITORING_CHECK_SUMMARY_FIELDS,
+    # Alert fragments
+    "alert_core": MONITORING_ALERT_CORE_FIELDS,
+    "alert_full": MONITORING_ALERT_FULL_FIELDS,
+    "alert_summary": MONITORING_ALERT_SUMMARY_FIELDS,
+    # Metric fragments
+    "metric_core": MONITORING_METRIC_CORE_FIELDS,
+    "metric_full": MONITORING_METRIC_FULL_FIELDS,
+    "metric_summary": MONITORING_METRIC_SUMMARY_FIELDS,
+}
+
+
+def get_monitoring_agent_fields(detail_level: str = "core") -> Set[str]:
+    """Get monitoring agent fragment names for specified detail level.
+
+    Args:
+        detail_level: Level of detail (summary, core, full)
+
+    Returns:
+        Set of fragment names
+    """
+    mapping = {
+        "summary": {"MonitoringAgentSummaryFields"},
+        "core": {"MonitoringAgentCoreFields"},
+        "full": {"MonitoringAgentFullFields"},
+    }
+
+    return mapping.get(detail_level, {"MonitoringAgentCoreFields"})
+
+
+def get_monitoring_check_fields(detail_level: str = "core") -> Set[str]:
+    """Get monitoring check fragment names for specified detail level.
+
+    Args:
+        detail_level: Level of detail (summary, core, full)
+
+    Returns:
+        Set of fragment names
+    """
+    mapping = {
+        "summary": {"MonitoringCheckSummaryFields"},
+        "core": {"MonitoringCheckCoreFields"},
+        "full": {"MonitoringCheckFullFields"},
+    }
+
+    return mapping.get(detail_level, {"MonitoringCheckCoreFields"})
+
+
+def get_monitoring_alert_fields(detail_level: str = "core") -> Set[str]:
+    """Get monitoring alert fragment names for specified detail level.
+
+    Args:
+        detail_level: Level of detail (summary, core, full)
+
+    Returns:
+        Set of fragment names
+    """
+    mapping = {
+        "summary": {"MonitoringAlertSummaryFields"},
+        "core": {"MonitoringAlertCoreFields"},
+        "full": {"MonitoringAlertFullFields"},
+    }
+
+    return mapping.get(detail_level, {"MonitoringAlertCoreFields"})
+
+
+def get_monitoring_metric_fields(detail_level: str = "core") -> Set[str]:
+    """Get monitoring metric fragment names for specified detail level.
+
+    Args:
+        detail_level: Level of detail (summary, core, full)
+
+    Returns:
+        Set of fragment names
+    """
+    mapping = {
+        "summary": {"MonitoringMetricSummaryFields"},
+        "core": {"MonitoringMetricCoreFields"},
+        "full": {"MonitoringMetricFullFields"},
+    }
+
+    return mapping.get(detail_level, {"MonitoringMetricCoreFields"})
+
+
+# Monitoring fragments (defined again to ensure they're available)
+# Note: These fragments are defined here because they weren't being properly included
+# when defined earlier in the file due to an unknown issue.
+
+MONITORING_AGENT_CORE_FIELDS_FIXED = GraphQLFragment(
+    name="MonitoringAgentCoreFields",
+    on_type="MonitoringAgent",
+    fields="""
+    ...BaseFields
+    name
+    description
+    status
+    version
+    hostId
+    hostName
+    ipAddress
+    port
+    lastSeen
+    """,
+    dependencies={"BaseFields"},
+)
+
+MONITORING_AGENT_FULL_FIELDS_FIXED = GraphQLFragment(
+    name="MonitoringAgentFullFields",
+    on_type="MonitoringAgent",
+    fields="""
+    ...MonitoringAgentCoreFields
+    apiKey
+    config
+    tags
+    installedAt
+    createdBy
+    metadata
+    """,
+    dependencies={"MonitoringAgentCoreFields"},
+)
+
+MONITORING_AGENT_SUMMARY_FIELDS_FIXED = GraphQLFragment(
+    name="MonitoringAgentSummaryFields",
+    on_type="MonitoringAgent",
+    fields="""
+    id
+    name
+    status
+    hostName
+    lastSeen
+    """,
+)
+
+MONITORING_CHECK_CORE_FIELDS_FIXED = GraphQLFragment(
+    name="MonitoringCheckCoreFields",
+    on_type="MonitoringCheck",
+    fields="""
+    ...BaseFields
+    name
+    description
+    checkType
+    target
+    status
+    enabled
+    interval
+    timeout
+    retryCount
+    agentId
+    siteId
+    assetId
+    lastCheck
+    nextCheck
+    """,
+    dependencies={"BaseFields"},
+)
+
+MONITORING_CHECK_FULL_FIELDS_FIXED = GraphQLFragment(
+    name="MonitoringCheckFullFields",
+    on_type="MonitoringCheck",
+    fields="""
+    ...MonitoringCheckCoreFields
+    config
+    thresholds
+    tags
+    lastResult
+    createdBy
+    metadata
+    """,
+    dependencies={"MonitoringCheckCoreFields"},
+)
+
+MONITORING_CHECK_SUMMARY_FIELDS_FIXED = GraphQLFragment(
+    name="MonitoringCheckSummaryFields",
+    on_type="MonitoringCheck",
+    fields="""
+    id
+    name
+    checkType
+    status
+    target
+    lastCheck
+    """,
+)
+
+MONITORING_ALERT_CORE_FIELDS_FIXED = GraphQLFragment(
+    name="MonitoringAlertCoreFields",
+    on_type="MonitoringAlert",
+    fields="""
+    ...BaseFields
+    name
+    description
+    checkId
+    severity
+    status
+    triggeredAt
+    acknowledgedAt
+    acknowledgedBy
+    resolvedAt
+    resolvedBy
+    alertCount
+    lastAlert
+    """,
+    dependencies={"BaseFields"},
+)
+
+MONITORING_ALERT_FULL_FIELDS_FIXED = GraphQLFragment(
+    name="MonitoringAlertFullFields",
+    on_type="MonitoringAlert",
+    fields="""
+    ...MonitoringAlertCoreFields
+    condition
+    notificationConfig
+    suppressionRules
+    escalationRules
+    tags
+    silencedUntil
+    createdBy
+    metadata
+    """,
+    dependencies={"MonitoringAlertCoreFields"},
+)
+
+MONITORING_ALERT_SUMMARY_FIELDS_FIXED = GraphQLFragment(
+    name="MonitoringAlertSummaryFields",
+    on_type="MonitoringAlert",
+    fields="""
+    id
+    name
+    severity
+    status
+    triggeredAt
+    alertCount
+    """,
+)
+
+MONITORING_METRIC_CORE_FIELDS_FIXED = GraphQLFragment(
+    name="MonitoringMetricCoreFields",
+    on_type="MonitoringMetric",
+    fields="""
+    ...BaseFields
+    name
+    description
+    metricType
+    unit
+    value
+    timestamp
+    agentId
+    checkId
+    assetId
+    siteId
+    """,
+    dependencies={"BaseFields"},
+)
+
+MONITORING_METRIC_FULL_FIELDS_FIXED = GraphQLFragment(
+    name="MonitoringMetricFullFields",
+    on_type="MonitoringMetric",
+    fields="""
+    ...MonitoringMetricCoreFields
+    labels
+    retentionPeriod
+    aggregationConfig
+    tags
+    metadata
+    """,
+    dependencies={"MonitoringMetricCoreFields"},
+)
+
+MONITORING_METRIC_SUMMARY_FIELDS_FIXED = GraphQLFragment(
+    name="MonitoringMetricSummaryFields",
+    on_type="MonitoringMetric",
+    fields="""
+    id
+    name
+    value
+    unit
+    timestamp
+    """,
+)
+
+# Now update ALL_FRAGMENTS to include the monitoring fragments
+ALL_FRAGMENTS.update(
+    {
+        "MonitoringAgentCoreFields": MONITORING_AGENT_CORE_FIELDS_FIXED,
+        "MonitoringAgentFullFields": MONITORING_AGENT_FULL_FIELDS_FIXED,
+        "MonitoringAgentSummaryFields": MONITORING_AGENT_SUMMARY_FIELDS_FIXED,
+        "MonitoringCheckCoreFields": MONITORING_CHECK_CORE_FIELDS_FIXED,
+        "MonitoringCheckFullFields": MONITORING_CHECK_FULL_FIELDS_FIXED,
+        "MonitoringCheckSummaryFields": MONITORING_CHECK_SUMMARY_FIELDS_FIXED,
+        "MonitoringAlertCoreFields": MONITORING_ALERT_CORE_FIELDS_FIXED,
+        "MonitoringAlertFullFields": MONITORING_ALERT_FULL_FIELDS_FIXED,
+        "MonitoringAlertSummaryFields": MONITORING_ALERT_SUMMARY_FIELDS_FIXED,
+        "MonitoringMetricCoreFields": MONITORING_METRIC_CORE_FIELDS_FIXED,
+        "MonitoringMetricFullFields": MONITORING_METRIC_FULL_FIELDS_FIXED,
+        "MonitoringMetricSummaryFields": MONITORING_METRIC_SUMMARY_FIELDS_FIXED,
+    }
+)
+
+# Create module-level aliases to match the expected naming
+MONITORING_AGENT_CORE_FIELDS = MONITORING_AGENT_CORE_FIELDS_FIXED
+MONITORING_AGENT_FULL_FIELDS = MONITORING_AGENT_FULL_FIELDS_FIXED
+MONITORING_AGENT_SUMMARY_FIELDS = MONITORING_AGENT_SUMMARY_FIELDS_FIXED
+MONITORING_CHECK_CORE_FIELDS = MONITORING_CHECK_CORE_FIELDS_FIXED
+MONITORING_CHECK_FULL_FIELDS = MONITORING_CHECK_FULL_FIELDS_FIXED
+MONITORING_CHECK_SUMMARY_FIELDS = MONITORING_CHECK_SUMMARY_FIELDS_FIXED
+MONITORING_ALERT_CORE_FIELDS = MONITORING_ALERT_CORE_FIELDS_FIXED
+MONITORING_ALERT_FULL_FIELDS = MONITORING_ALERT_FULL_FIELDS_FIXED
+MONITORING_ALERT_SUMMARY_FIELDS = MONITORING_ALERT_SUMMARY_FIELDS_FIXED
+MONITORING_METRIC_CORE_FIELDS = MONITORING_METRIC_CORE_FIELDS_FIXED
+MONITORING_METRIC_FULL_FIELDS = MONITORING_METRIC_FULL_FIELDS_FIXED
+MONITORING_METRIC_SUMMARY_FIELDS = MONITORING_METRIC_SUMMARY_FIELDS_FIXED

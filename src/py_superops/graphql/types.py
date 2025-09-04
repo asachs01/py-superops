@@ -975,9 +975,9 @@ class Timer(BaseModel):
     """Timer model for active time tracking."""
 
     user_id: str
-    time_entry_id: Optional[str] = None
     description: str
     start_time: datetime
+    time_entry_id: Optional[str] = None
     paused_time: Optional[datetime] = None
     total_paused_duration: int = 0  # minutes
     current_duration: Optional[int] = None  # calculated field in minutes
@@ -1268,7 +1268,7 @@ class AttachmentFilter:
     version: Optional[int] = None
 
 
-@dataclass  
+@dataclass
 class TimerFilter:
     """Timer query filter."""
 
@@ -2098,6 +2098,432 @@ class TimeEntryApprovalInput:
     time_entry_ids: List[str]
     status: TimeEntryStatus
     approval_notes: Optional[str] = None
+
+
+# Monitoring Enums
+class AlertSeverity(str, Enum):
+    """Alert severity enumeration."""
+
+    LOW = "LOW"
+    MEDIUM = "MEDIUM"
+    HIGH = "HIGH"
+    CRITICAL = "CRITICAL"
+
+
+class CheckType(str, Enum):
+    """Monitoring check type enumeration."""
+
+    PING = "PING"
+    HTTP = "HTTP"
+    HTTPS = "HTTPS"
+    TCP = "TCP"
+    UDP = "UDP"
+    DNS = "DNS"
+    SSL_CERT = "SSL_CERT"
+    DISK_SPACE = "DISK_SPACE"
+    MEMORY = "MEMORY"
+    CPU = "CPU"
+    PROCESS = "PROCESS"
+    SERVICE = "SERVICE"
+    DATABASE = "DATABASE"
+    CUSTOM_SCRIPT = "CUSTOM_SCRIPT"
+
+
+class MetricType(str, Enum):
+    """Metric type enumeration."""
+
+    COUNTER = "COUNTER"
+    GAUGE = "GAUGE"
+    HISTOGRAM = "HISTOGRAM"
+    SUMMARY = "SUMMARY"
+
+
+class MonitoringAgentStatus(str, Enum):
+    """Monitoring agent status enumeration."""
+
+    ONLINE = "ONLINE"
+    OFFLINE = "OFFLINE"
+    DEGRADED = "DEGRADED"
+    INSTALLING = "INSTALLING"
+    UPDATING = "UPDATING"
+    ERROR = "ERROR"
+
+
+class CheckStatus(str, Enum):
+    """Monitoring check status enumeration."""
+
+    HEALTHY = "HEALTHY"
+    WARNING = "WARNING"
+    CRITICAL = "CRITICAL"
+    UNKNOWN = "UNKNOWN"
+    DISABLED = "DISABLED"
+
+
+class AlertStatus(str, Enum):
+    """Alert status enumeration."""
+
+    ACTIVE = "ACTIVE"
+    ACKNOWLEDGED = "ACKNOWLEDGED"
+    RESOLVED = "RESOLVED"
+    SILENCED = "SILENCED"
+
+
+# Monitoring Data Classes
+@dataclass
+class MonitoringAgent:
+    """Monitoring agent data class."""
+
+    id: str
+    name: str
+    description: Optional[str] = None
+    status: MonitoringAgentStatus = MonitoringAgentStatus.OFFLINE
+    version: Optional[str] = None
+    host_id: Optional[str] = None
+    host_name: Optional[str] = None
+    ip_address: Optional[str] = None
+    port: Optional[int] = None
+    api_key: Optional[str] = None
+    config: Optional[Dict[str, Any]] = None
+    tags: List[str] = field(default_factory=list)
+    last_seen: Optional[datetime] = None
+    installed_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+    created_at: Optional[datetime] = None
+    created_by: Optional[str] = None
+    metadata: Optional[Dict[str, Any]] = None
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "MonitoringAgent":
+        """Create MonitoringAgent from dictionary."""
+        return cls(
+            id=data["id"],
+            name=data["name"],
+            description=data.get("description"),
+            status=MonitoringAgentStatus(data.get("status", "OFFLINE")),
+            version=data.get("version"),
+            host_id=data.get("host_id"),
+            host_name=data.get("host_name"),
+            ip_address=data.get("ip_address"),
+            port=data.get("port"),
+            api_key=data.get("api_key"),
+            config=data.get("config"),
+            tags=data.get("tags", []),
+            last_seen=convert_iso_to_datetime(data.get("last_seen")),
+            installed_at=convert_iso_to_datetime(data.get("installed_at")),
+            updated_at=convert_iso_to_datetime(data.get("updated_at")),
+            created_at=convert_iso_to_datetime(data.get("created_at")),
+            created_by=data.get("created_by"),
+            metadata=data.get("metadata"),
+        )
+
+
+@dataclass
+class MonitoringCheck:
+    """Monitoring check data class."""
+
+    id: str
+    name: str
+    description: Optional[str] = None
+    check_type: CheckType = CheckType.PING
+    target: Optional[str] = None
+    status: CheckStatus = CheckStatus.UNKNOWN
+    enabled: bool = True
+    interval: int = 300  # seconds
+    timeout: int = 30  # seconds
+    retry_count: int = 3
+    config: Optional[Dict[str, Any]] = None
+    thresholds: Optional[Dict[str, Any]] = None
+    agent_id: Optional[str] = None
+    site_id: Optional[str] = None
+    asset_id: Optional[str] = None
+    tags: List[str] = field(default_factory=list)
+    last_check: Optional[datetime] = None
+    next_check: Optional[datetime] = None
+    last_result: Optional[Dict[str, Any]] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+    created_by: Optional[str] = None
+    metadata: Optional[Dict[str, Any]] = None
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "MonitoringCheck":
+        """Create MonitoringCheck from dictionary."""
+        return cls(
+            id=data["id"],
+            name=data["name"],
+            description=data.get("description"),
+            check_type=CheckType(data.get("check_type", "PING")),
+            target=data.get("target"),
+            status=CheckStatus(data.get("status", "UNKNOWN")),
+            enabled=data.get("enabled", True),
+            interval=data.get("interval", 300),
+            timeout=data.get("timeout", 30),
+            retry_count=data.get("retry_count", 3),
+            config=data.get("config"),
+            thresholds=data.get("thresholds"),
+            agent_id=data.get("agent_id"),
+            site_id=data.get("site_id"),
+            asset_id=data.get("asset_id"),
+            tags=data.get("tags", []),
+            last_check=convert_iso_to_datetime(data.get("last_check")),
+            next_check=convert_iso_to_datetime(data.get("next_check")),
+            last_result=data.get("last_result"),
+            created_at=convert_iso_to_datetime(data.get("created_at")),
+            updated_at=convert_iso_to_datetime(data.get("updated_at")),
+            created_by=data.get("created_by"),
+            metadata=data.get("metadata"),
+        )
+
+
+@dataclass
+class MonitoringAlert:
+    """Monitoring alert data class."""
+
+    id: str
+    name: str
+    description: Optional[str] = None
+    check_id: Optional[str] = None
+    severity: AlertSeverity = AlertSeverity.MEDIUM
+    status: AlertStatus = AlertStatus.ACTIVE
+    condition: Optional[Dict[str, Any]] = None
+    notification_config: Optional[Dict[str, Any]] = None
+    suppression_rules: Optional[Dict[str, Any]] = None
+    escalation_rules: Optional[Dict[str, Any]] = None
+    tags: List[str] = field(default_factory=list)
+    triggered_at: Optional[datetime] = None
+    acknowledged_at: Optional[datetime] = None
+    acknowledged_by: Optional[str] = None
+    resolved_at: Optional[datetime] = None
+    resolved_by: Optional[str] = None
+    silenced_until: Optional[datetime] = None
+    alert_count: int = 0
+    last_alert: Optional[datetime] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+    created_by: Optional[str] = None
+    metadata: Optional[Dict[str, Any]] = None
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "MonitoringAlert":
+        """Create MonitoringAlert from dictionary."""
+        return cls(
+            id=data["id"],
+            name=data["name"],
+            description=data.get("description"),
+            check_id=data.get("check_id"),
+            severity=AlertSeverity(data.get("severity", "MEDIUM")),
+            status=AlertStatus(data.get("status", "ACTIVE")),
+            condition=data.get("condition"),
+            notification_config=data.get("notification_config"),
+            suppression_rules=data.get("suppression_rules"),
+            escalation_rules=data.get("escalation_rules"),
+            tags=data.get("tags", []),
+            triggered_at=convert_iso_to_datetime(data.get("triggered_at")),
+            acknowledged_at=convert_iso_to_datetime(data.get("acknowledged_at")),
+            acknowledged_by=data.get("acknowledged_by"),
+            resolved_at=convert_iso_to_datetime(data.get("resolved_at")),
+            resolved_by=data.get("resolved_by"),
+            silenced_until=convert_iso_to_datetime(data.get("silenced_until")),
+            alert_count=data.get("alert_count", 0),
+            last_alert=convert_iso_to_datetime(data.get("last_alert")),
+            created_at=convert_iso_to_datetime(data.get("created_at")),
+            updated_at=convert_iso_to_datetime(data.get("updated_at")),
+            created_by=data.get("created_by"),
+            metadata=data.get("metadata"),
+        )
+
+
+@dataclass
+class MonitoringMetric:
+    """Monitoring metric data class."""
+
+    id: str
+    name: str
+    description: Optional[str] = None
+    metric_type: MetricType = MetricType.GAUGE
+    unit: Optional[str] = None
+    value: Optional[float] = None
+    labels: Optional[Dict[str, str]] = None
+    agent_id: Optional[str] = None
+    check_id: Optional[str] = None
+    asset_id: Optional[str] = None
+    site_id: Optional[str] = None
+    timestamp: Optional[datetime] = None
+    retention_period: Optional[int] = None  # days
+    aggregation_config: Optional[Dict[str, Any]] = None
+    tags: List[str] = field(default_factory=list)
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+    metadata: Optional[Dict[str, Any]] = None
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "MonitoringMetric":
+        """Create MonitoringMetric from dictionary."""
+        return cls(
+            id=data["id"],
+            name=data["name"],
+            description=data.get("description"),
+            metric_type=MetricType(data.get("metric_type", "GAUGE")),
+            unit=data.get("unit"),
+            value=data.get("value"),
+            labels=data.get("labels"),
+            agent_id=data.get("agent_id"),
+            check_id=data.get("check_id"),
+            asset_id=data.get("asset_id"),
+            site_id=data.get("site_id"),
+            timestamp=convert_iso_to_datetime(data.get("timestamp")),
+            retention_period=data.get("retention_period"),
+            aggregation_config=data.get("aggregation_config"),
+            tags=data.get("tags", []),
+            created_at=convert_iso_to_datetime(data.get("created_at")),
+            updated_at=convert_iso_to_datetime(data.get("updated_at")),
+            metadata=data.get("metadata"),
+        )
+
+
+# Monitoring Input Types
+@dataclass
+class MonitoringAgentInput:
+    """Input for creating/updating monitoring agents."""
+
+    name: str
+    description: Optional[str] = None
+    host_id: Optional[str] = None
+    host_name: Optional[str] = None
+    ip_address: Optional[str] = None
+    port: Optional[int] = None
+    config: Optional[Dict[str, Any]] = None
+    tags: Optional[List[str]] = None
+    metadata: Optional[Dict[str, Any]] = None
+
+
+@dataclass
+class MonitoringCheckInput:
+    """Input for creating/updating monitoring checks."""
+
+    name: str
+    description: Optional[str] = None
+    check_type: Optional[CheckType] = None
+    target: Optional[str] = None
+    enabled: Optional[bool] = None
+    interval: Optional[int] = None
+    timeout: Optional[int] = None
+    retry_count: Optional[int] = None
+    config: Optional[Dict[str, Any]] = None
+    thresholds: Optional[Dict[str, Any]] = None
+    agent_id: Optional[str] = None
+    site_id: Optional[str] = None
+    asset_id: Optional[str] = None
+    tags: Optional[List[str]] = None
+    metadata: Optional[Dict[str, Any]] = None
+
+
+@dataclass
+class MonitoringAlertInput:
+    """Input for creating/updating monitoring alerts."""
+
+    name: str
+    description: Optional[str] = None
+    check_id: Optional[str] = None
+    severity: Optional[AlertSeverity] = None
+    condition: Optional[Dict[str, Any]] = None
+    notification_config: Optional[Dict[str, Any]] = None
+    suppression_rules: Optional[Dict[str, Any]] = None
+    escalation_rules: Optional[Dict[str, Any]] = None
+    tags: Optional[List[str]] = None
+    metadata: Optional[Dict[str, Any]] = None
+
+
+@dataclass
+class MonitoringMetricInput:
+    """Input for creating/updating monitoring metrics."""
+
+    name: str
+    description: Optional[str] = None
+    metric_type: Optional[MetricType] = None
+    unit: Optional[str] = None
+    value: Optional[float] = None
+    labels: Optional[Dict[str, str]] = None
+    agent_id: Optional[str] = None
+    check_id: Optional[str] = None
+    asset_id: Optional[str] = None
+    site_id: Optional[str] = None
+    retention_period: Optional[int] = None
+    aggregation_config: Optional[Dict[str, Any]] = None
+    tags: Optional[List[str]] = None
+    metadata: Optional[Dict[str, Any]] = None
+
+
+@dataclass
+class MonitoringAgentFilter:
+    """Filter for monitoring agent queries."""
+
+    id: Optional[str] = None
+    name: Optional[str] = None
+    status: Optional[MonitoringAgentStatus] = None
+    host_id: Optional[str] = None
+    host_name: Optional[str] = None
+    ip_address: Optional[str] = None
+    tags: Optional[List[str]] = None
+    last_seen_after: Optional[datetime] = None
+    last_seen_before: Optional[datetime] = None
+    created_after: Optional[datetime] = None
+    created_before: Optional[datetime] = None
+
+
+@dataclass
+class MonitoringCheckFilter:
+    """Filter for monitoring check queries."""
+
+    id: Optional[str] = None
+    name: Optional[str] = None
+    check_type: Optional[CheckType] = None
+    status: Optional[CheckStatus] = None
+    enabled: Optional[bool] = None
+    agent_id: Optional[str] = None
+    site_id: Optional[str] = None
+    asset_id: Optional[str] = None
+    target: Optional[str] = None
+    tags: Optional[List[str]] = None
+    last_check_after: Optional[datetime] = None
+    last_check_before: Optional[datetime] = None
+    created_after: Optional[datetime] = None
+    created_before: Optional[datetime] = None
+
+
+@dataclass
+class MonitoringAlertFilter:
+    """Filter for monitoring alert queries."""
+
+    id: Optional[str] = None
+    name: Optional[str] = None
+    check_id: Optional[str] = None
+    severity: Optional[AlertSeverity] = None
+    status: Optional[AlertStatus] = None
+    tags: Optional[List[str]] = None
+    triggered_after: Optional[datetime] = None
+    triggered_before: Optional[datetime] = None
+    acknowledged: Optional[bool] = None
+    resolved: Optional[bool] = None
+    created_after: Optional[datetime] = None
+    created_before: Optional[datetime] = None
+
+
+@dataclass
+class MonitoringMetricFilter:
+    """Filter for monitoring metric queries."""
+
+    id: Optional[str] = None
+    name: Optional[str] = None
+    metric_type: Optional[MetricType] = None
+    unit: Optional[str] = None
+    agent_id: Optional[str] = None
+    check_id: Optional[str] = None
+    asset_id: Optional[str] = None
+    site_id: Optional[str] = None
+    timestamp_after: Optional[datetime] = None
+    timestamp_before: Optional[datetime] = None
+    tags: Optional[List[str]] = None
 
 
 # Utility Functions

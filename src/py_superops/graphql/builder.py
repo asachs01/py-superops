@@ -17,13 +17,17 @@ from .fragments import (
     get_asset_fields,
     get_client_fields,
     get_comment_fields,
+    get_monitoring_agent_fields,
+    get_monitoring_alert_fields,
+    get_monitoring_check_fields,
+    get_monitoring_metric_fields,
     get_project_fields,
     get_task_fields,
     get_ticket_fields,
-    get_user_fields,
     get_time_entry_fields,
     get_time_entry_template_fields,
     get_timer_fields,
+    get_user_fields,
 )
 from .types import (
     AssetFilter,
@@ -31,6 +35,14 @@ from .types import (
     ClientInput,
     CommentFilter,
     CommentInput,
+    MonitoringAgentFilter,
+    MonitoringAgentInput,
+    MonitoringAlertFilter,
+    MonitoringAlertInput,
+    MonitoringCheckFilter,
+    MonitoringCheckInput,
+    MonitoringMetricFilter,
+    MonitoringMetricInput,
     PaginationArgs,
     ProjectFilter,
     ProjectInput,
@@ -41,14 +53,14 @@ from .types import (
     TaskFilter,
     TicketFilter,
     TicketInput,
-    UserFilter,
-    UserInput,
     TimeEntryApprovalInput,
     TimeEntryFilter,
     TimeEntryInput,
     TimeEntryTemplateInput,
     TimerFilter,
     TimerInput,
+    UserFilter,
+    UserInput,
     serialize_filter_value,
     serialize_input,
 )
@@ -2333,3 +2345,962 @@ def create_timer_mutation_builder() -> TimerMutationBuilder:
         TimerMutationBuilder instance
     """
     return TimerMutationBuilder()
+
+
+# Monitoring builders
+class MonitoringAgentQueryBuilder(QueryBuilder):
+    """Query builder for monitoring agents."""
+
+    def __init__(self, detail_level: str = "core"):
+        """Initialize the monitoring agent query builder.
+
+        Args:
+            detail_level: Level of detail (summary, core, full)
+        """
+        super().__init__()
+        self.detail_level = detail_level
+        self._fragments.update(get_monitoring_agent_fields(detail_level))
+
+    def get(self, agent_id: str) -> tuple[str, Dict[str, Any]]:
+        """Build query to get a single monitoring agent.
+
+        Args:
+            agent_id: Monitoring agent ID
+
+        Returns:
+            Tuple of (query_string, variables)
+        """
+        self.add_variable("id", "ID!", agent_id)
+
+        fields_fragment = list(self._fragments)[0]
+        query = f"""
+        query GetMonitoringAgent($id: ID!) {{
+            monitoringAgent(id: $id) {{
+                ...{fields_fragment}
+            }}
+        }}
+        """
+
+        return self._build_query_with_fragments(query)
+
+    def list(
+        self,
+        filter: Optional[MonitoringAgentFilter] = None,
+        pagination: Optional[PaginationArgs] = None,
+        sort: Optional[SortArgs] = None,
+    ) -> tuple[str, Dict[str, Any]]:
+        """Build query to list monitoring agents.
+
+        Args:
+            filter: Filter criteria
+            pagination: Pagination parameters
+            sort: Sort parameters
+
+        Returns:
+            Tuple of (query_string, variables)
+        """
+        if filter:
+            self.add_variable("filter", "MonitoringAgentFilter", serialize_input(filter))
+        if pagination:
+            self.add_variable("pagination", "PaginationInput", serialize_input(pagination))
+        if sort:
+            self.add_variable("sort", "SortInput", serialize_input(sort))
+
+        fields_fragment = list(self._fragments)[0]
+        query = f"""
+        query ListMonitoringAgents(
+            $filter: MonitoringAgentFilter
+            $pagination: PaginationInput
+            $sort: SortInput
+        ) {{
+            monitoringAgents(
+                filter: $filter
+                pagination: $pagination
+                sort: $sort
+            ) {{
+                items {{
+                    ...{fields_fragment}
+                }}
+                pagination {{
+                    ...PaginationInfo
+                }}
+            }}
+        }}
+        """
+
+        self._fragments.add("PaginationInfo")
+        return self._build_query_with_fragments(query)
+
+    def search(self, query: str) -> tuple[str, Dict[str, Any]]:
+        """Build query to search monitoring agents.
+
+        Args:
+            query: Search query string
+
+        Returns:
+            Tuple of (query_string, variables)
+        """
+        self.add_variable("query", "String!", query)
+
+        fields_fragment = list(self._fragments)[0]
+        search_query = f"""
+        query SearchMonitoringAgents($query: String!) {{
+            searchMonitoringAgents(query: $query) {{
+                items {{
+                    ...{fields_fragment}
+                }}
+                pagination {{
+                    ...PaginationInfo
+                }}
+            }}
+        }}
+        """
+
+        self._fragments.add("PaginationInfo")
+        return self._build_query_with_fragments(search_query)
+
+
+class MonitoringAgentMutationBuilder(MutationBuilder):
+    """Mutation builder for monitoring agents."""
+
+    def __init__(self, detail_level: str = "core"):
+        """Initialize the monitoring agent mutation builder.
+
+        Args:
+            detail_level: Level of detail for returned fields
+        """
+        super().__init__()
+        self.detail_level = detail_level
+        self._fragments.update(get_monitoring_agent_fields(detail_level))
+
+    def create(self, agent_input: MonitoringAgentInput) -> tuple[str, Dict[str, Any]]:
+        """Build mutation to create a monitoring agent.
+
+        Args:
+            agent_input: Agent creation input
+
+        Returns:
+            Tuple of (mutation_string, variables)
+        """
+        self.add_variable("input", "MonitoringAgentInput!", serialize_input(agent_input))
+
+        fields_fragment = list(self._fragments)[0]
+        mutation = f"""
+        mutation CreateMonitoringAgent($input: MonitoringAgentInput!) {{
+            createMonitoringAgent(input: $input) {{
+                ...{fields_fragment}
+            }}
+        }}
+        """
+
+        return self._build_query_with_fragments(mutation)
+
+    def update(
+        self, agent_id: str, agent_input: MonitoringAgentInput
+    ) -> tuple[str, Dict[str, Any]]:
+        """Build mutation to update a monitoring agent.
+
+        Args:
+            agent_id: Agent ID
+            agent_input: Agent update input
+
+        Returns:
+            Tuple of (mutation_string, variables)
+        """
+        self.add_variable("id", "ID!", agent_id)
+        self.add_variable("input", "MonitoringAgentInput!", serialize_input(agent_input))
+
+        fields_fragment = list(self._fragments)[0]
+        mutation = f"""
+        mutation UpdateMonitoringAgent($id: ID!, $input: MonitoringAgentInput!) {{
+            updateMonitoringAgent(id: $id, input: $input) {{
+                ...{fields_fragment}
+            }}
+        }}
+        """
+
+        return self._build_query_with_fragments(mutation)
+
+    def delete(self, agent_id: str) -> tuple[str, Dict[str, Any]]:
+        """Build mutation to delete a monitoring agent.
+
+        Args:
+            agent_id: Agent ID
+
+        Returns:
+            Tuple of (mutation_string, variables)
+        """
+        self.add_variable("id", "ID!", agent_id)
+
+        mutation = """
+        mutation DeleteMonitoringAgent($id: ID!) {
+            deleteMonitoringAgent(id: $id) {
+                success
+                message
+            }
+        }
+        """
+
+        return mutation, self._variables
+
+    def install(
+        self, host_id: str, config: Optional[Dict[str, Any]] = None
+    ) -> tuple[str, Dict[str, Any]]:
+        """Build mutation to install a monitoring agent.
+
+        Args:
+            host_id: Host ID to install agent on
+            config: Optional installation configuration
+
+        Returns:
+            Tuple of (mutation_string, variables)
+        """
+        self.add_variable("hostId", "ID!", host_id)
+        if config:
+            self.add_variable("config", "JSON", config)
+
+        fields_fragment = list(self._fragments)[0]
+        mutation = f"""
+        mutation InstallMonitoringAgent($hostId: ID!, $config: JSON) {{
+            installMonitoringAgent(hostId: $hostId, config: $config) {{
+                ...{fields_fragment}
+            }}
+        }}
+        """
+
+        return self._build_query_with_fragments(mutation)
+
+
+class MonitoringCheckQueryBuilder(QueryBuilder):
+    """Query builder for monitoring checks."""
+
+    def __init__(self, detail_level: str = "core"):
+        """Initialize the monitoring check query builder.
+
+        Args:
+            detail_level: Level of detail (summary, core, full)
+        """
+        super().__init__()
+        self.detail_level = detail_level
+        self._fragments.update(get_monitoring_check_fields(detail_level))
+
+    def get(self, check_id: str) -> tuple[str, Dict[str, Any]]:
+        """Build query to get a single monitoring check.
+
+        Args:
+            check_id: Monitoring check ID
+
+        Returns:
+            Tuple of (query_string, variables)
+        """
+        self.add_variable("id", "ID!", check_id)
+
+        fields_fragment = list(self._fragments)[0]
+        query = f"""
+        query GetMonitoringCheck($id: ID!) {{
+            monitoringCheck(id: $id) {{
+                ...{fields_fragment}
+            }}
+        }}
+        """
+
+        return self._build_query_with_fragments(query)
+
+    def list(
+        self,
+        filter: Optional[MonitoringCheckFilter] = None,
+        pagination: Optional[PaginationArgs] = None,
+        sort: Optional[SortArgs] = None,
+    ) -> tuple[str, Dict[str, Any]]:
+        """Build query to list monitoring checks.
+
+        Args:
+            filter: Filter criteria
+            pagination: Pagination parameters
+            sort: Sort parameters
+
+        Returns:
+            Tuple of (query_string, variables)
+        """
+        if filter:
+            self.add_variable("filter", "MonitoringCheckFilter", serialize_input(filter))
+        if pagination:
+            self.add_variable("pagination", "PaginationInput", serialize_input(pagination))
+        if sort:
+            self.add_variable("sort", "SortInput", serialize_input(sort))
+
+        fields_fragment = list(self._fragments)[0]
+        query = f"""
+        query ListMonitoringChecks(
+            $filter: MonitoringCheckFilter
+            $pagination: PaginationInput
+            $sort: SortInput
+        ) {{
+            monitoringChecks(
+                filter: $filter
+                pagination: $pagination
+                sort: $sort
+            ) {{
+                items {{
+                    ...{fields_fragment}
+                }}
+                pagination {{
+                    ...PaginationInfo
+                }}
+            }}
+        }}
+        """
+
+        self._fragments.add("PaginationInfo")
+        return self._build_query_with_fragments(query)
+
+
+class MonitoringCheckMutationBuilder(MutationBuilder):
+    """Mutation builder for monitoring checks."""
+
+    def __init__(self, detail_level: str = "core"):
+        """Initialize the monitoring check mutation builder.
+
+        Args:
+            detail_level: Level of detail for returned fields
+        """
+        super().__init__()
+        self.detail_level = detail_level
+        self._fragments.update(get_monitoring_check_fields(detail_level))
+
+    def create(self, check_input: MonitoringCheckInput) -> tuple[str, Dict[str, Any]]:
+        """Build mutation to create a monitoring check.
+
+        Args:
+            check_input: Check creation input
+
+        Returns:
+            Tuple of (mutation_string, variables)
+        """
+        self.add_variable("input", "MonitoringCheckInput!", serialize_input(check_input))
+
+        fields_fragment = list(self._fragments)[0]
+        mutation = f"""
+        mutation CreateMonitoringCheck($input: MonitoringCheckInput!) {{
+            createMonitoringCheck(input: $input) {{
+                ...{fields_fragment}
+            }}
+        }}
+        """
+
+        return self._build_query_with_fragments(mutation)
+
+    def update(
+        self, check_id: str, check_input: MonitoringCheckInput
+    ) -> tuple[str, Dict[str, Any]]:
+        """Build mutation to update a monitoring check.
+
+        Args:
+            check_id: Check ID
+            check_input: Check update input
+
+        Returns:
+            Tuple of (mutation_string, variables)
+        """
+        self.add_variable("id", "ID!", check_id)
+        self.add_variable("input", "MonitoringCheckInput!", serialize_input(check_input))
+
+        fields_fragment = list(self._fragments)[0]
+        mutation = f"""
+        mutation UpdateMonitoringCheck($id: ID!, $input: MonitoringCheckInput!) {{
+            updateMonitoringCheck(id: $id, input: $input) {{
+                ...{fields_fragment}
+            }}
+        }}
+        """
+
+        return self._build_query_with_fragments(mutation)
+
+    def delete(self, check_id: str) -> tuple[str, Dict[str, Any]]:
+        """Build mutation to delete a monitoring check.
+
+        Args:
+            check_id: Check ID
+
+        Returns:
+            Tuple of (mutation_string, variables)
+        """
+        self.add_variable("id", "ID!", check_id)
+
+        mutation = """
+        mutation DeleteMonitoringCheck($id: ID!) {
+            deleteMonitoringCheck(id: $id) {
+                success
+                message
+            }
+        }
+        """
+
+        return mutation, self._variables
+
+    def run_check(self, check_id: str) -> tuple[str, Dict[str, Any]]:
+        """Build mutation to manually run a monitoring check.
+
+        Args:
+            check_id: Check ID
+
+        Returns:
+            Tuple of (mutation_string, variables)
+        """
+        self.add_variable("id", "ID!", check_id)
+
+        mutation = """
+        mutation RunMonitoringCheck($id: ID!) {
+            runMonitoringCheck(id: $id) {
+                success
+                message
+                result
+            }
+        }
+        """
+
+        return mutation, self._variables
+
+
+class MonitoringAlertQueryBuilder(QueryBuilder):
+    """Query builder for monitoring alerts."""
+
+    def __init__(self, detail_level: str = "core"):
+        """Initialize the monitoring alert query builder.
+
+        Args:
+            detail_level: Level of detail (summary, core, full)
+        """
+        super().__init__()
+        self.detail_level = detail_level
+        self._fragments.update(get_monitoring_alert_fields(detail_level))
+
+    def get(self, alert_id: str) -> tuple[str, Dict[str, Any]]:
+        """Build query to get a single monitoring alert.
+
+        Args:
+            alert_id: Monitoring alert ID
+
+        Returns:
+            Tuple of (query_string, variables)
+        """
+        self.add_variable("id", "ID!", alert_id)
+
+        fields_fragment = list(self._fragments)[0]
+        query = f"""
+        query GetMonitoringAlert($id: ID!) {{
+            monitoringAlert(id: $id) {{
+                ...{fields_fragment}
+            }}
+        }}
+        """
+
+        return self._build_query_with_fragments(query)
+
+    def list(
+        self,
+        filter: Optional[MonitoringAlertFilter] = None,
+        pagination: Optional[PaginationArgs] = None,
+        sort: Optional[SortArgs] = None,
+    ) -> tuple[str, Dict[str, Any]]:
+        """Build query to list monitoring alerts.
+
+        Args:
+            filter: Filter criteria
+            pagination: Pagination parameters
+            sort: Sort parameters
+
+        Returns:
+            Tuple of (query_string, variables)
+        """
+        if filter:
+            self.add_variable("filter", "MonitoringAlertFilter", serialize_input(filter))
+        if pagination:
+            self.add_variable("pagination", "PaginationInput", serialize_input(pagination))
+        if sort:
+            self.add_variable("sort", "SortInput", serialize_input(sort))
+
+        fields_fragment = list(self._fragments)[0]
+        query = f"""
+        query ListMonitoringAlerts(
+            $filter: MonitoringAlertFilter
+            $pagination: PaginationInput
+            $sort: SortInput
+        ) {{
+            monitoringAlerts(
+                filter: $filter
+                pagination: $pagination
+                sort: $sort
+            ) {{
+                items {{
+                    ...{fields_fragment}
+                }}
+                pagination {{
+                    ...PaginationInfo
+                }}
+            }}
+        }}
+        """
+
+        self._fragments.add("PaginationInfo")
+        return self._build_query_with_fragments(query)
+
+
+class MonitoringAlertMutationBuilder(MutationBuilder):
+    """Mutation builder for monitoring alerts."""
+
+    def __init__(self, detail_level: str = "core"):
+        """Initialize the monitoring alert mutation builder.
+
+        Args:
+            detail_level: Level of detail for returned fields
+        """
+        super().__init__()
+        self.detail_level = detail_level
+        self._fragments.update(get_monitoring_alert_fields(detail_level))
+
+    def create(self, alert_input: MonitoringAlertInput) -> tuple[str, Dict[str, Any]]:
+        """Build mutation to create a monitoring alert.
+
+        Args:
+            alert_input: Alert creation input
+
+        Returns:
+            Tuple of (mutation_string, variables)
+        """
+        self.add_variable("input", "MonitoringAlertInput!", serialize_input(alert_input))
+
+        fields_fragment = list(self._fragments)[0]
+        mutation = f"""
+        mutation CreateMonitoringAlert($input: MonitoringAlertInput!) {{
+            createMonitoringAlert(input: $input) {{
+                ...{fields_fragment}
+            }}
+        }}
+        """
+
+        return self._build_query_with_fragments(mutation)
+
+    def acknowledge(
+        self, alert_id: str, comment: Optional[str] = None
+    ) -> tuple[str, Dict[str, Any]]:
+        """Build mutation to acknowledge a monitoring alert.
+
+        Args:
+            alert_id: Alert ID
+            comment: Optional acknowledgment comment
+
+        Returns:
+            Tuple of (mutation_string, variables)
+        """
+        self.add_variable("id", "ID!", alert_id)
+        if comment:
+            self.add_variable("comment", "String", comment)
+
+        fields_fragment = list(self._fragments)[0]
+        mutation = f"""
+        mutation AcknowledgeMonitoringAlert($id: ID!, $comment: String) {{
+            acknowledgeMonitoringAlert(id: $id, comment: $comment) {{
+                ...{fields_fragment}
+            }}
+        }}
+        """
+
+        return self._build_query_with_fragments(mutation)
+
+    def resolve(self, alert_id: str, comment: Optional[str] = None) -> tuple[str, Dict[str, Any]]:
+        """Build mutation to resolve a monitoring alert.
+
+        Args:
+            alert_id: Alert ID
+            comment: Optional resolution comment
+
+        Returns:
+            Tuple of (mutation_string, variables)
+        """
+        self.add_variable("id", "ID!", alert_id)
+        if comment:
+            self.add_variable("comment", "String", comment)
+
+        fields_fragment = list(self._fragments)[0]
+        mutation = f"""
+        mutation ResolveMonitoringAlert($id: ID!, $comment: String) {{
+            resolveMonitoringAlert(id: $id, comment: $comment) {{
+                ...{fields_fragment}
+            }}
+        }}
+        """
+
+        return self._build_query_with_fragments(mutation)
+
+    def silence(
+        self, alert_id: str, duration_minutes: int, comment: Optional[str] = None
+    ) -> tuple[str, Dict[str, Any]]:
+        """Build mutation to silence a monitoring alert.
+
+        Args:
+            alert_id: Alert ID
+            duration_minutes: Duration to silence in minutes
+            comment: Optional silence comment
+
+        Returns:
+            Tuple of (mutation_string, variables)
+        """
+        self.add_variable("id", "ID!", alert_id)
+        self.add_variable("durationMinutes", "Int!", duration_minutes)
+        if comment:
+            self.add_variable("comment", "String", comment)
+
+        fields_fragment = list(self._fragments)[0]
+        mutation = f"""
+        mutation SilenceMonitoringAlert($id: ID!, $durationMinutes: Int!, $comment: String) {{
+            silenceMonitoringAlert(id: $id, durationMinutes: $durationMinutes, comment: $comment) {{
+                ...{fields_fragment}
+            }}
+        }}
+        """
+
+        return self._build_query_with_fragments(mutation)
+
+
+class MonitoringMetricQueryBuilder(QueryBuilder):
+    """Query builder for monitoring metrics."""
+
+    def __init__(self, detail_level: str = "core"):
+        """Initialize the monitoring metric query builder.
+
+        Args:
+            detail_level: Level of detail (summary, core, full)
+        """
+        super().__init__()
+        self.detail_level = detail_level
+        self._fragments.update(get_monitoring_metric_fields(detail_level))
+
+    def get(self, metric_id: str) -> tuple[str, Dict[str, Any]]:
+        """Build query to get a single monitoring metric.
+
+        Args:
+            metric_id: Monitoring metric ID
+
+        Returns:
+            Tuple of (query_string, variables)
+        """
+        self.add_variable("id", "ID!", metric_id)
+
+        fields_fragment = list(self._fragments)[0]
+        query = f"""
+        query GetMonitoringMetric($id: ID!) {{
+            monitoringMetric(id: $id) {{
+                ...{fields_fragment}
+            }}
+        }}
+        """
+
+        return self._build_query_with_fragments(query)
+
+    def list(
+        self,
+        filter: Optional[MonitoringMetricFilter] = None,
+        pagination: Optional[PaginationArgs] = None,
+        sort: Optional[SortArgs] = None,
+    ) -> tuple[str, Dict[str, Any]]:
+        """Build query to list monitoring metrics.
+
+        Args:
+            filter: Filter criteria
+            pagination: Pagination parameters
+            sort: Sort parameters
+
+        Returns:
+            Tuple of (query_string, variables)
+        """
+        if filter:
+            self.add_variable("filter", "MonitoringMetricFilter", serialize_input(filter))
+        if pagination:
+            self.add_variable("pagination", "PaginationInput", serialize_input(pagination))
+        if sort:
+            self.add_variable("sort", "SortInput", serialize_input(sort))
+
+        fields_fragment = list(self._fragments)[0]
+        query = f"""
+        query ListMonitoringMetrics(
+            $filter: MonitoringMetricFilter
+            $pagination: PaginationInput
+            $sort: SortInput
+        ) {{
+            monitoringMetrics(
+                filter: $filter
+                pagination: $pagination
+                sort: $sort
+            ) {{
+                items {{
+                    ...{fields_fragment}
+                }}
+                pagination {{
+                    ...PaginationInfo
+                }}
+            }}
+        }}
+        """
+
+        self._fragments.add("PaginationInfo")
+        return self._build_query_with_fragments(query)
+
+    def get_dashboard_data(
+        self,
+        agent_ids: Optional[List[str]] = None,
+        check_ids: Optional[List[str]] = None,
+        time_range_minutes: int = 60,
+    ) -> tuple[str, Dict[str, Any]]:
+        """Build query to get monitoring dashboard data.
+
+        Args:
+            agent_ids: Optional list of agent IDs to filter by
+            check_ids: Optional list of check IDs to filter by
+            time_range_minutes: Time range in minutes to look back
+
+        Returns:
+            Tuple of (query_string, variables)
+        """
+        if agent_ids:
+            self.add_variable("agentIds", "[ID!]", agent_ids)
+        if check_ids:
+            self.add_variable("checkIds", "[ID!]", check_ids)
+        self.add_variable("timeRangeMinutes", "Int!", time_range_minutes)
+
+        query = """
+        query GetMonitoringDashboardData(
+            $agentIds: [ID!]
+            $checkIds: [ID!]
+            $timeRangeMinutes: Int!
+        ) {
+            monitoringDashboard(
+                agentIds: $agentIds
+                checkIds: $checkIds
+                timeRangeMinutes: $timeRangeMinutes
+            ) {
+                agentSummary {
+                    totalAgents
+                    onlineAgents
+                    offlineAgents
+                    degradedAgents
+                }
+                checkSummary {
+                    totalChecks
+                    healthyChecks
+                    warningChecks
+                    criticalChecks
+                }
+                alertSummary {
+                    activeAlerts
+                    acknowledgedAlerts
+                    criticalAlerts
+                    highPriorityAlerts
+                }
+                recentMetrics {
+                    name
+                    value
+                    unit
+                    timestamp
+                    status
+                }
+            }
+        }
+        """
+
+        return query, self._variables
+
+
+class MonitoringMetricMutationBuilder(MutationBuilder):
+    """Mutation builder for monitoring metrics."""
+
+    def __init__(self, detail_level: str = "core"):
+        """Initialize the monitoring metric mutation builder.
+
+        Args:
+            detail_level: Level of detail for returned fields
+        """
+        super().__init__()
+        self.detail_level = detail_level
+        self._fragments.update(get_monitoring_metric_fields(detail_level))
+
+    def create(self, metric_input: MonitoringMetricInput) -> tuple[str, Dict[str, Any]]:
+        """Build mutation to create a monitoring metric.
+
+        Args:
+            metric_input: Metric creation input
+
+        Returns:
+            Tuple of (mutation_string, variables)
+        """
+        self.add_variable("input", "MonitoringMetricInput!", serialize_input(metric_input))
+
+        fields_fragment = list(self._fragments)[0]
+        mutation = f"""
+        mutation CreateMonitoringMetric($input: MonitoringMetricInput!) {{
+            createMonitoringMetric(input: $input) {{
+                ...{fields_fragment}
+            }}
+        }}
+        """
+
+        return self._build_query_with_fragments(mutation)
+
+    def record_value(
+        self,
+        metric_name: str,
+        value: float,
+        labels: Optional[Dict[str, str]] = None,
+        timestamp: Optional[str] = None,
+    ) -> tuple[str, Dict[str, Any]]:
+        """Build mutation to record a metric value.
+
+        Args:
+            metric_name: Name of the metric
+            value: Metric value
+            labels: Optional labels for the metric
+            timestamp: Optional timestamp (ISO format)
+
+        Returns:
+            Tuple of (mutation_string, variables)
+        """
+        self.add_variable("metricName", "String!", metric_name)
+        self.add_variable("value", "Float!", value)
+        if labels:
+            self.add_variable("labels", "JSON", labels)
+        if timestamp:
+            self.add_variable("timestamp", "String", timestamp)
+
+        mutation = """
+        mutation RecordMetricValue(
+            $metricName: String!
+            $value: Float!
+            $labels: JSON
+            $timestamp: String
+        ) {
+            recordMetricValue(
+                metricName: $metricName
+                value: $value
+                labels: $labels
+                timestamp: $timestamp
+            ) {
+                success
+                message
+            }
+        }
+        """
+
+        return mutation, self._variables
+
+
+# Factory functions for monitoring builders
+def create_monitoring_agent_query_builder(
+    detail_level: str = "core",
+) -> MonitoringAgentQueryBuilder:
+    """Create a monitoring agent query builder.
+
+    Args:
+        detail_level: Level of detail (summary, core, full)
+
+    Returns:
+        MonitoringAgentQueryBuilder instance
+    """
+    return MonitoringAgentQueryBuilder(detail_level)
+
+
+def create_monitoring_agent_mutation_builder(
+    detail_level: str = "core",
+) -> MonitoringAgentMutationBuilder:
+    """Create a monitoring agent mutation builder.
+
+    Args:
+        detail_level: Level of detail for returned fields
+
+    Returns:
+        MonitoringAgentMutationBuilder instance
+    """
+    return MonitoringAgentMutationBuilder(detail_level)
+
+
+def create_monitoring_check_query_builder(
+    detail_level: str = "core",
+) -> MonitoringCheckQueryBuilder:
+    """Create a monitoring check query builder.
+
+    Args:
+        detail_level: Level of detail (summary, core, full)
+
+    Returns:
+        MonitoringCheckQueryBuilder instance
+    """
+    return MonitoringCheckQueryBuilder(detail_level)
+
+
+def create_monitoring_check_mutation_builder(
+    detail_level: str = "core",
+) -> MonitoringCheckMutationBuilder:
+    """Create a monitoring check mutation builder.
+
+    Args:
+        detail_level: Level of detail for returned fields
+
+    Returns:
+        MonitoringCheckMutationBuilder instance
+    """
+    return MonitoringCheckMutationBuilder(detail_level)
+
+
+def create_monitoring_alert_query_builder(
+    detail_level: str = "core",
+) -> MonitoringAlertQueryBuilder:
+    """Create a monitoring alert query builder.
+
+    Args:
+        detail_level: Level of detail (summary, core, full)
+
+    Returns:
+        MonitoringAlertQueryBuilder instance
+    """
+    return MonitoringAlertQueryBuilder(detail_level)
+
+
+def create_monitoring_alert_mutation_builder(
+    detail_level: str = "core",
+) -> MonitoringAlertMutationBuilder:
+    """Create a monitoring alert mutation builder.
+
+    Args:
+        detail_level: Level of detail for returned fields
+
+    Returns:
+        MonitoringAlertMutationBuilder instance
+    """
+    return MonitoringAlertMutationBuilder(detail_level)
+
+
+def create_monitoring_metric_query_builder(
+    detail_level: str = "core",
+) -> MonitoringMetricQueryBuilder:
+    """Create a monitoring metric query builder.
+
+    Args:
+        detail_level: Level of detail (summary, core, full)
+
+    Returns:
+        MonitoringMetricQueryBuilder instance
+    """
+    return MonitoringMetricQueryBuilder(detail_level)
+
+
+def create_monitoring_metric_mutation_builder(
+    detail_level: str = "core",
+) -> MonitoringMetricMutationBuilder:
+    """Create a monitoring metric mutation builder.
+
+    Args:
+        detail_level: Level of detail for returned fields
+
+    Returns:
+        MonitoringMetricMutationBuilder instance
+    """
+    return MonitoringMetricMutationBuilder(detail_level)
