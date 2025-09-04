@@ -114,6 +114,7 @@ try:
         SiteManager,
         TasksManager,
         TicketManager,
+        TimeEntriesManager,
         UsersManager,
         WebhooksManager,
     )
@@ -143,6 +144,12 @@ try:
         SuperOpsQueries,
         TicketPriority,
         TicketStatus,
+        TimeEntry,
+        TimeEntryStatus,
+        TimeEntryTemplate,
+        TimeEntryType,
+        Timer,
+        TimerState,
         UserRole,
         UserStatus,
         build_asset_list_query,
@@ -150,6 +157,7 @@ try:
         build_contract_list_query,
         build_project_list_query,
         build_ticket_list_query,
+        build_time_entry_list_query,
         build_user_list_query,
     )
 
@@ -198,6 +206,7 @@ __all__ = [
             "KnowledgeBaseArticleManager",
             "KnowledgeBaseCollectionManager",
             "ProjectsManager",
+            "TimeEntriesManager",
             "UsersManager",
             "WebhooksManager",
         ]
@@ -221,6 +230,12 @@ __all__ = [
             "SLALevel",
             "ProjectStatus",
             "ProjectPriority",
+            "TimeEntry",
+            "TimeEntryStatus",
+            "TimeEntryType",
+            "TimerState",
+            "Timer",
+            "TimeEntryTemplate",
             "UserRole",
             "UserStatus",
             "PaginationArgs",
@@ -232,6 +247,7 @@ __all__ = [
             "build_asset_list_query",
             "build_contract_list_query",
             "build_project_list_query",
+            "build_time_entry_list_query",
             "build_user_list_query",
         ]
         if _GRAPHQL_AVAILABLE

@@ -70,6 +70,7 @@ from .projects import ProjectsManager
 from .sites import SiteManager
 from .tasks import TasksManager
 from .tickets import TicketManager
+from .time_entries import TimeEntriesManager
 from .users import UsersManager
 from .webhooks import WebhooksManager
 
@@ -90,6 +91,7 @@ __all__ = [
     "KnowledgeBaseArticleManager",
     "KnowledgeBaseCollectionManager",
     "ProjectsManager",
+    "TimeEntriesManager",
     "UsersManager",
     "WebhooksManager",
 ]
@@ -107,6 +109,7 @@ MANAGER_REGISTRY = {
     "contracts": ContractsManager,
     "knowledge_base": KnowledgeBaseManager,
     "projects": ProjectsManager,
+    "time_entries": TimeEntriesManager,
     "users": UsersManager,
     "webhooks": WebhooksManager,
 }

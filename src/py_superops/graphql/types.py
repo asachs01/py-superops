@@ -292,6 +292,36 @@ class WebhookDeliveryStatus(str, Enum):
     CANCELLED = "CANCELLED"
 
 
+class TimeEntryStatus(str, Enum):
+    """Time entry status enumeration."""
+
+    DRAFT = "DRAFT"
+    SUBMITTED = "SUBMITTED"
+    APPROVED = "APPROVED"
+    REJECTED = "REJECTED"
+    BILLED = "BILLED"
+
+
+class TimeEntryType(str, Enum):
+    """Time entry type enumeration."""
+
+    WORK = "WORK"
+    BREAK = "BREAK"
+    MEETING = "MEETING"
+    TRAVEL = "TRAVEL"
+    TRAINING = "TRAINING"
+    MAINTENANCE = "MAINTENANCE"
+    SUPPORT = "SUPPORT"
+
+
+class TimerState(str, Enum):
+    """Timer state enumeration."""
+
+    STOPPED = "STOPPED"
+    RUNNING = "RUNNING"
+    PAUSED = "PAUSED"
+
+
 # Base Models
 @dataclass
 class BaseModel:
@@ -910,6 +940,55 @@ class Webhook(BaseModel):
     success_count: int = 0
     total_deliveries: int = 0
     content_type: str = "application/json"
+
+
+# Time Entry Types
+@dataclass
+class TimeEntry(BaseModel):
+    """Time entry model."""
+
+    user_id: str
+    description: str
+    start_time: datetime
+    end_time: Optional[datetime] = None
+    duration_minutes: Optional[int] = None  # calculated field
+    ticket_id: Optional[str] = None
+    task_id: Optional[str] = None
+    project_id: Optional[str] = None
+    client_id: Optional[str] = None
+    status: TimeEntryStatus = TimeEntryStatus.DRAFT
+    entry_type: TimeEntryType = TimeEntryType.WORK
+    is_billable: bool = True
+    hourly_rate: Optional[float] = None
+    total_amount: Optional[float] = None  # calculated field
+    work_category: Optional[str] = None
+    notes: Optional[str] = None
+    approval_notes: Optional[str] = None
+    approved_by: Optional[str] = None
+    approved_at: Optional[datetime] = None
+    tags: List[str] = field(default_factory=list)
+    custom_fields: Dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class Timer(BaseModel):
+    """Timer model for active time tracking."""
+
+    user_id: str
+    time_entry_id: Optional[str] = None
+    description: str
+    start_time: datetime
+    paused_time: Optional[datetime] = None
+    total_paused_duration: int = 0  # minutes
+    current_duration: Optional[int] = None  # calculated field in minutes
+    state: TimerState = TimerState.STOPPED
+    ticket_id: Optional[str] = None
+    task_id: Optional[str] = None
+    project_id: Optional[str] = None
+    client_id: Optional[str] = None
+    is_billable: bool = True
+    entry_type: TimeEntryType = TimeEntryType.WORK
+    work_category: Optional[str] = None
     tags: List[str] = field(default_factory=list)
 
 
@@ -946,6 +1025,22 @@ class WebhookEventRecord(BaseModel):
     delivery_id: Optional[str] = None
     user_id: Optional[str] = None
     metadata: Dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class TimeEntryTemplate(BaseModel):
+    """Time entry template for common work types."""
+
+    name: str
+    description: str
+    user_id: str
+    default_duration_minutes: Optional[int] = None
+    entry_type: TimeEntryType = TimeEntryType.WORK
+    is_billable: bool = True
+    work_category: Optional[str] = None
+    tags: List[str] = field(default_factory=list)
+    custom_fields: Dict[str, Any] = field(default_factory=dict)
+    is_active: bool = True
 
 
 # Query Filter Types
@@ -1111,6 +1206,29 @@ class ContractFilter:
     value_min: Optional[float] = None
     value_max: Optional[float] = None
     tags: Optional[List[str]] = None
+
+
+@dataclass
+class TimeEntryFilter:
+    """Time entry query filter."""
+
+    user_id: Optional[str] = None
+    ticket_id: Optional[str] = None
+    task_id: Optional[str] = None
+    project_id: Optional[str] = None
+    client_id: Optional[str] = None
+    status: Optional[TimeEntryStatus] = None
+    entry_type: Optional[TimeEntryType] = None
+    is_billable: Optional[bool] = None
+    work_category: Optional[str] = None
+    tags: Optional[List[str]] = None
+    start_time_after: Optional[datetime] = None
+    start_time_before: Optional[datetime] = None
+    end_time_after: Optional[datetime] = None
+    end_time_before: Optional[datetime] = None
+    min_duration_minutes: Optional[int] = None
+    max_duration_minutes: Optional[int] = None
+    approved_by: Optional[str] = None
     created_after: Optional[datetime] = None
     created_before: Optional[datetime] = None
 
@@ -1148,6 +1266,20 @@ class AttachmentFilter:
     file_size_min: Optional[int] = None
     file_size_max: Optional[int] = None
     version: Optional[int] = None
+
+
+@dataclass  
+class TimerFilter:
+    """Timer query filter."""
+
+    user_id: Optional[str] = None
+    state: Optional[TimerState] = None
+    ticket_id: Optional[str] = None
+    task_id: Optional[str] = None
+    project_id: Optional[str] = None
+    client_id: Optional[str] = None
+    is_billable: Optional[bool] = None
+    entry_type: Optional[TimeEntryType] = None
     created_after: Optional[datetime] = None
     created_before: Optional[datetime] = None
 
@@ -1408,6 +1540,27 @@ class UsersResponse(PaginatedResponse):
     """Users query response."""
 
     items: List[User]
+
+
+@dataclass
+class TimeEntriesResponse(PaginatedResponse):
+    """Time entries query response."""
+
+    items: List[TimeEntry]
+
+
+@dataclass
+class TimersResponse(PaginatedResponse):
+    """Timers query response."""
+
+    items: List[Timer]
+
+
+@dataclass
+class TimeEntryTemplatesResponse(PaginatedResponse):
+    """Time entry templates query response."""
+
+    items: List[TimeEntryTemplate]
 
 
 # Mutation Input Types
@@ -1880,8 +2033,71 @@ class UserInput:
     is_primary: Optional[bool] = None
     notification_preferences: Optional[Dict[str, Any]] = None
     permissions: Optional[List[str]] = None
+
+
+@dataclass
+class TimeEntryInput:
+    """Time entry creation/update input."""
+
+    user_id: str
+    description: str
+    start_time: datetime
+    end_time: Optional[datetime] = None
+    duration_minutes: Optional[int] = None
+    ticket_id: Optional[str] = None
+    task_id: Optional[str] = None
+    project_id: Optional[str] = None
+    client_id: Optional[str] = None
+    status: Optional[TimeEntryStatus] = None
+    entry_type: Optional[TimeEntryType] = None
+    is_billable: Optional[bool] = None
+    hourly_rate: Optional[float] = None
+    work_category: Optional[str] = None
+    notes: Optional[str] = None
     tags: Optional[List[str]] = None
     custom_fields: Optional[Dict[str, Any]] = None
+
+
+@dataclass
+class TimerInput:
+    """Timer creation/update input."""
+
+    user_id: str
+    description: str
+    start_time: Optional[datetime] = None
+    ticket_id: Optional[str] = None
+    task_id: Optional[str] = None
+    project_id: Optional[str] = None
+    client_id: Optional[str] = None
+    is_billable: Optional[bool] = None
+    entry_type: Optional[TimeEntryType] = None
+    work_category: Optional[str] = None
+    tags: Optional[List[str]] = None
+
+
+@dataclass
+class TimeEntryTemplateInput:
+    """Time entry template creation/update input."""
+
+    name: str
+    description: str
+    user_id: str
+    default_duration_minutes: Optional[int] = None
+    entry_type: Optional[TimeEntryType] = None
+    is_billable: Optional[bool] = None
+    work_category: Optional[str] = None
+    tags: Optional[List[str]] = None
+    custom_fields: Optional[Dict[str, Any]] = None
+    is_active: Optional[bool] = None
+
+
+@dataclass
+class TimeEntryApprovalInput:
+    """Time entry approval/rejection input."""
+
+    time_entry_ids: List[str]
+    status: TimeEntryStatus
+    approval_notes: Optional[str] = None
 
 
 # Utility Functions

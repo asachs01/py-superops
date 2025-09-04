@@ -57,6 +57,10 @@ from .builder import (  # Base builders; Specific builders; Factory functions
     TicketQueryBuilder,
     UserMutationBuilder,
     UserQueryBuilder,
+    TimeEntryMutationBuilder,
+    TimeEntryQueryBuilder,
+    TimerMutationBuilder,
+    TimerQueryBuilder,
     create_asset_query_builder,
     create_client_mutation_builder,
     create_client_query_builder,
@@ -68,10 +72,14 @@ from .builder import (  # Base builders; Specific builders; Factory functions
     create_ticket_query_builder,
     create_user_mutation_builder,
     create_user_query_builder,
+    create_time_entry_mutation_builder,
+    create_time_entry_query_builder,
+    create_timer_mutation_builder,
+    create_timer_query_builder,
 )
 
 # GraphQL fragments
-from .fragments import (  # Individual fragments; Fragment collections; Utility functions
+from .fragments import (
     ALL_FRAGMENTS,
     ASSET_CORE_FIELDS,
     ASSET_FRAGMENTS,
@@ -128,6 +136,12 @@ from .fragments import (  # Individual fragments; Fragment collections; Utility 
     WEBHOOK_FRAGMENTS,
     WEBHOOK_FULL_FIELDS,
     WEBHOOK_SUMMARY_FIELDS,
+    TIME_ENTRY_CORE_FIELDS,
+    TIME_ENTRY_FRAGMENTS,
+    TIME_ENTRY_FULL_FIELDS,
+    TIME_ENTRY_SUMMARY_FIELDS,
+    TIME_ENTRY_TEMPLATE_FIELDS,
+    TIMER_FIELDS,
     build_fragments_string,
     create_query_with_fragments,
     get_asset_fields,
@@ -140,6 +154,7 @@ from .fragments import (  # Individual fragments; Fragment collections; Utility 
     get_ticket_fields,
     get_user_fields,
     get_webhook_fields,
+    get_time_entry_fields,
     resolve_dependencies,
 )
 
@@ -229,6 +244,19 @@ from .types import (  # Base types; Enums; Models; Filters; Input types for muta
     WebhooksResponse,
     WebhookStatus,
     WebhookTestInput,
+    TimeEntriesResponse,
+    TimeEntry,
+    TimeEntryFilter,
+    TimeEntryInput,
+    TimeEntryStatus,
+    TimeEntryTemplate,
+    TimeEntryTemplateInput,
+    TimeEntryType,
+    Timer,
+    TimerFilter,
+    TimerInput,
+    TimersResponse,
+    TimerState,
     convert_datetime_to_iso,
     convert_iso_to_datetime,
     serialize_filter_value,
@@ -256,6 +284,9 @@ __all__ = [
     "ProjectPriority",
     "WebhookEvent",
     "WebhookStatus",
+    "TimeEntryStatus",
+    "TimeEntryType",
+    "TimerState",
     "Client",
     "Comment",
     "CommentAttachment",
@@ -272,6 +303,9 @@ __all__ = [
     "ProjectMilestone",
     "ProjectTask",
     "ProjectTimeEntry",
+    "TimeEntry",
+    "Timer",
+    "TimeEntryTemplate",
     "KnowledgeBaseCollection",
     "KnowledgeBaseArticle",
     "User",
@@ -290,6 +324,14 @@ __all__ = [
     "TicketInput",
     "AssetInput",
     "ProjectInput",
+    "TimeEntryFilter",
+    "TimerFilter",
+    "ClientInput",
+    "TicketInput",
+    "AssetInput",
+    "TimeEntryInput",
+    "TimerInput",
+    "TimeEntryTemplateInput",
     "ContactInput",
     "SiteInput",
     "ContractInput",
@@ -303,6 +345,8 @@ __all__ = [
     "TicketsResponse",
     "AssetsResponse",
     "ProjectsResponse",
+    "TimeEntriesResponse",
+    "TimersResponse",
     "ContactsResponse",
     "SitesResponse",
     "ContractsResponse",
@@ -338,6 +382,11 @@ __all__ = [
     "TICKET_FULL_FIELDS",
     "TICKET_SUMMARY_FIELDS",
     "TICKET_COMMENT_FIELDS",
+    "TIME_ENTRY_CORE_FIELDS",
+    "TIME_ENTRY_FULL_FIELDS",
+    "TIME_ENTRY_SUMMARY_FIELDS",
+    "TIME_ENTRY_TEMPLATE_FIELDS",
+    "TIMER_FIELDS",
     "KB_COLLECTION_CORE_FIELDS",
     "KB_COLLECTION_FULL_FIELDS",
     "KB_ARTICLE_CORE_FIELDS",
@@ -357,6 +406,7 @@ __all__ = [
     "SITE_FRAGMENTS",
     "ASSET_FRAGMENTS",
     "TICKET_FRAGMENTS",
+    "TIME_ENTRY_FRAGMENTS",
     "KB_FRAGMENTS",
     "PROJECT_FRAGMENTS",
     "CONTRACT_CORE_FIELDS",
@@ -383,6 +433,7 @@ __all__ = [
     "get_comment_fields",
     "get_ticket_fields",
     "get_asset_fields",
+    "get_time_entry_fields",
     "get_kb_fields",
     "get_contract_fields",
     "get_project_fields",
@@ -403,6 +454,12 @@ __all__ = [
     "TicketMutationBuilder",
     "ProjectMutationBuilder",
     "UserMutationBuilder",
+    "TimeEntryQueryBuilder",
+    "TimerQueryBuilder",
+    "ClientMutationBuilder",
+    "TicketMutationBuilder",
+    "TimeEntryMutationBuilder",
+    "TimerMutationBuilder",
     "create_client_query_builder",
     "create_comment_query_builder",
     "create_comment_mutation_builder",
@@ -414,6 +471,12 @@ __all__ = [
     "create_project_mutation_builder",
     "create_user_query_builder",
     "create_user_mutation_builder",
+    "create_time_entry_query_builder",
+    "create_timer_query_builder",
+    "create_client_mutation_builder",
+    "create_ticket_mutation_builder",
+    "create_time_entry_mutation_builder",
+    "create_timer_mutation_builder",
     # Queries
     "CommonQueries",
     "SuperOpsQueries",
@@ -595,6 +658,72 @@ def build_project_list_query(
     return query, variables
 
 
+def build_time_entry_list_query(
+    user_id: str = None,
+    ticket_id: str = None,
+    project_id: str = None,
+    client_id: str = None,
+    status: "TimeEntryStatus" = None,
+    entry_type: "TimeEntryType" = None,
+    is_billable: bool = None,
+    start_date: str = None,
+    end_date: str = None,
+    page: int = 1,
+    page_size: int = 50,
+    detail_level: str = "core",
+) -> tuple[str, dict]:
+    """Build a time entry list query with common filters.
+
+    Args:
+        user_id: User ID filter
+        ticket_id: Ticket ID filter
+        project_id: Project ID filter
+        client_id: Client ID filter
+        status: Time entry status filter
+        entry_type: Time entry type filter
+        is_billable: Billable filter
+        start_date: Start date filter (ISO format)
+        end_date: End date filter (ISO format)
+        page: Page number
+        page_size: Items per page
+        detail_level: Level of detail (summary, core, full)
+
+    Returns:
+        Tuple of (query string, variables dict)
+    """
+    builder = create_time_entry_query_builder(detail_level)
+
+    # Build filter
+    filter_kwargs = {}
+    if user_id:
+        filter_kwargs["user_id"] = user_id
+    if ticket_id:
+        filter_kwargs["ticket_id"] = ticket_id
+    if project_id:
+        filter_kwargs["project_id"] = project_id
+    if client_id:
+        filter_kwargs["client_id"] = client_id
+    if status:
+        filter_kwargs["status"] = status
+    if entry_type:
+        filter_kwargs["entry_type"] = entry_type
+    if is_billable is not None:
+        filter_kwargs["is_billable"] = is_billable
+    if start_date:
+        filter_kwargs["start_date"] = start_date
+    if end_date:
+        filter_kwargs["end_date"] = end_date
+
+    time_entry_filter = TimeEntryFilter(**filter_kwargs) if filter_kwargs else None
+    pagination = PaginationArgs(page=page, pageSize=page_size)
+    sort_args = SortArgs(field="startTime", direction="DESC")
+
+    query = builder.build_list(filter_obj=time_entry_filter, pagination=pagination, sort=sort_args)
+    variables = builder.get_variables()
+
+    return query, variables
+
+
 def build_contract_list_query(
     client_id: str = None,
     contract_type: ContractType = None,
@@ -716,6 +845,20 @@ def build_user_list_query(
     sort_args = SortArgs(field="last_name", direction="ASC")
 
     query = builder.build_list(filter_obj=user_filter, pagination=pagination, sort=sort_args)
+    if entry_type:
+        filter_kwargs["entry_type"] = entry_type
+    if is_billable is not None:
+        filter_kwargs["is_billable"] = is_billable
+    if start_date:
+        filter_kwargs["start_date"] = start_date
+    if end_date:
+        filter_kwargs["end_date"] = end_date
+
+    time_entry_filter = TimeEntryFilter(**filter_kwargs) if filter_kwargs else None
+    pagination = PaginationArgs(page=page, pageSize=page_size)
+    sort_args = SortArgs(field="startTime", direction="DESC")
+
+    query = builder.build_list(filter_obj=time_entry_filter, pagination=pagination, sort=sort_args)
     variables = builder.get_variables()
 
     return query, variables
@@ -743,6 +886,8 @@ def get_package_info():
             "Assets",
             "Tickets",
             "Projects",
+            "Time Entries",
+            "Timers",
             "Knowledge Base Collections",
             "Knowledge Base Articles",
         ],

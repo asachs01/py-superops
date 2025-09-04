@@ -800,6 +800,63 @@ ATTACHMENT_SUMMARY_FIELDS = GraphQLFragment(
     attachmentType
     version
     uploadedByName
+    """,
+    dependencies={"BaseFields"},
+)
+
+
+# Time Entry fragments
+TIME_ENTRY_CORE_FIELDS = GraphQLFragment(
+    name="TimeEntryCoreFields",
+    on_type="TimeEntry",
+    fields="""
+    ...BaseFields
+    userId
+    description
+    startTime
+    endTime
+    durationMinutes
+    status
+    entryType
+    isBillable
+    """,
+    dependencies={"BaseFields"},
+)
+
+TIME_ENTRY_FULL_FIELDS = GraphQLFragment(
+    name="TimeEntryFullFields",
+    on_type="TimeEntry",
+    fields="""
+    ...TimeEntryCoreFields
+    ticketId
+    taskId
+    projectId
+    clientId
+    hourlyRate
+    totalAmount
+    workCategory
+    notes
+    approvalNotes
+    approvedBy
+    approvedAt
+    tags
+    customFields
+    """,
+    dependencies={"TimeEntryCoreFields"},
+)
+
+TIME_ENTRY_SUMMARY_FIELDS = GraphQLFragment(
+    name="TimeEntrySummaryFields",
+    on_type="TimeEntry",
+    fields="""
+    id
+    description
+    startTime
+    endTime
+    durationMinutes
+    status
+    isBillable
+    totalAmount
     createdAt
     """,
 )
@@ -894,6 +951,50 @@ WEBHOOK_DELIVERY_FIELDS = GraphQLFragment(
     dependencies={"BaseFields"},
 )
 
+TIMER_FIELDS = GraphQLFragment(
+    name="TimerFields",
+    on_type="Timer",
+    fields="""
+    ...BaseFields
+    userId
+    timeEntryId
+    description
+    startTime
+    pausedTime
+    totalPausedDuration
+    currentDuration
+    state
+    ticketId
+    taskId
+    projectId
+    clientId
+    isBillable
+    entryType
+    workCategory
+    tags
+    """,
+    dependencies={"BaseFields"},
+)
+
+TIME_ENTRY_TEMPLATE_FIELDS = GraphQLFragment(
+    name="TimeEntryTemplateFields",
+    on_type="TimeEntryTemplate",
+    fields="""
+    ...BaseFields
+    name
+    description
+    userId
+    defaultDurationMinutes
+    entryType
+    isBillable
+    workCategory
+    tags
+    customFields
+    isActive
+    """,
+    dependencies={"BaseFields"},
+)
+
 WEBHOOK_EVENT_RECORD_FIELDS = GraphQLFragment(
     name="WebhookEventRecordFields",
     on_type="WebhookEventRecord",
@@ -968,6 +1069,11 @@ ALL_FRAGMENTS = {
         WEBHOOK_SUMMARY_FIELDS,
         WEBHOOK_DELIVERY_FIELDS,
         WEBHOOK_EVENT_RECORD_FIELDS,
+        TIME_ENTRY_CORE_FIELDS,
+        TIME_ENTRY_FULL_FIELDS,
+        TIME_ENTRY_SUMMARY_FIELDS,
+        TIMER_FIELDS,
+        TIME_ENTRY_TEMPLATE_FIELDS,
     ]
 }
 
@@ -1060,6 +1166,20 @@ WEBHOOK_FRAGMENTS = {
     "summary": WEBHOOK_SUMMARY_FIELDS,
     "delivery": WEBHOOK_DELIVERY_FIELDS,
     "event_record": WEBHOOK_EVENT_RECORD_FIELDS,
+}
+
+TIME_ENTRY_FRAGMENTS = {
+    "core": TIME_ENTRY_CORE_FIELDS,
+    "full": TIME_ENTRY_FULL_FIELDS,
+    "summary": TIME_ENTRY_SUMMARY_FIELDS,
+}
+
+TIMER_FRAGMENTS = {
+    "fields": TIMER_FIELDS,
+}
+
+TIME_ENTRY_TEMPLATE_FRAGMENTS = {
+    "fields": TIME_ENTRY_TEMPLATE_FIELDS,
 }
 
 
@@ -1393,6 +1513,23 @@ def get_attachment_fields(detail_level: str = "core") -> Set[str]:
     return mapping.get(detail_level, {"AttachmentCoreFields"})
 
 
+def get_time_entry_fields(detail_level: str = "core") -> Set[str]:
+    """Get time entry fragment names for specified detail level.
+
+    Args:
+        detail_level: Level of detail (summary, core, full)
+
+    Returns:
+        Set of fragment names
+    """
+    mapping = {
+        "summary": {"TimeEntrySummaryFields"},
+        "core": {"TimeEntryCoreFields"},
+        "full": {"TimeEntryFullFields"},
+    }
+    return mapping.get(detail_level, {"TimeEntryCoreFields"})
+
+
 def get_user_fields(detail_level: str = "core") -> Set[str]:
     """Get user fragment names for specified detail level.
 
@@ -1409,6 +1546,15 @@ def get_user_fields(detail_level: str = "core") -> Set[str]:
     }
 
     return mapping.get(detail_level, {"UserCoreFields"})
+
+
+def get_timer_fields() -> Set[str]:
+    """Get timer fragment names.
+
+    Returns:
+        Set of fragment names
+    """
+    return {"TimerFields"}
 
 
 def get_webhook_fields(
@@ -1441,3 +1587,12 @@ def get_webhook_fields(
         fragments.add("WebhookEventRecordFields")
 
     return fragments
+
+
+def get_time_entry_template_fields() -> Set[str]:
+    """Get time entry template fragment names.
+
+    Returns:
+        Set of fragment names
+    """
+    return {"TimeEntryTemplateFields"}

@@ -21,6 +21,9 @@ from .fragments import (
     get_task_fields,
     get_ticket_fields,
     get_user_fields,
+    get_time_entry_fields,
+    get_time_entry_template_fields,
+    get_timer_fields,
 )
 from .types import (
     AssetFilter,
@@ -40,6 +43,12 @@ from .types import (
     TicketInput,
     UserFilter,
     UserInput,
+    TimeEntryApprovalInput,
+    TimeEntryFilter,
+    TimeEntryInput,
+    TimeEntryTemplateInput,
+    TimerFilter,
+    TimerInput,
     serialize_filter_value,
     serialize_input,
 )
@@ -1736,6 +1745,516 @@ def create_project_mutation_builder(detail_level: str = "core") -> ProjectMutati
     return ProjectMutationBuilder(detail_level)
 
 
+# Time Entry Builders
+class TimeEntryQueryBuilder(SelectionQueryBuilder):
+    """Builder for time entry-related queries."""
+
+    def __init__(self, detail_level: str = "core"):
+        """Initialize time entry query builder.
+
+        Args:
+            detail_level: Level of detail (summary, core, full)
+        """
+        super().__init__()
+        self._detail_level = detail_level
+
+        # Add fragments for time entries
+        fragments = get_time_entry_fields(detail_level)
+        self.add_fragments(fragments)
+
+    def build_get(self, time_entry_id: str) -> str:
+        """Build query to get a single time entry.
+
+        Args:
+            time_entry_id: Time entry ID
+
+        Returns:
+            GraphQL query string
+        """
+        self.add_variable("id", "ID!", time_entry_id)
+
+        fragments_str = build_fragments_string(self._fragments)
+        spreads = "\n  ".join(f"...{name}" for name in sorted(self._fragments))
+
+        query = f"""query GetTimeEntry($id: ID!) {{
+  timeEntry(id: $id) {{
+    {spreads}
+  }}
+}}
+
+{fragments_str}"""
+
+        return query
+
+    def build_list(
+        self,
+        filter_obj: Optional[TimeEntryFilter] = None,
+        pagination: Optional[PaginationArgs] = None,
+        sort: Optional[SortArgs] = None,
+    ) -> str:
+        """Build query to list time entries.
+
+        Args:
+            filter_obj: Filter conditions
+            pagination: Pagination settings
+            sort: Sort settings
+
+        Returns:
+            GraphQL query string
+        """
+        # Add variables
+        if filter_obj:
+            self.add_variable("filters", "TimeEntryFilter", serialize_input(filter_obj))
+
+        if pagination:
+            self.add_variable("page", "Int!", pagination.page)
+            self.add_variable("pageSize", "Int!", pagination.pageSize)
+        else:
+            self.add_variable("page", "Int!", 1)
+            self.add_variable("pageSize", "Int!", 50)
+
+        if sort:
+            self.add_variable("sortBy", "String", sort.field)
+            self.add_variable("sortOrder", "SortOrder", sort.direction)
+
+        fragments_str = build_fragments_string(self._fragments)
+        spreads = "\n      ".join(f"...{name}" for name in sorted(self._fragments))
+
+        query = f"""query ListTimeEntries($page: Int!, $pageSize: Int!, $filters: TimeEntryFilter, $sortBy: String, $sortOrder: SortOrder) {{
+  timeEntries(page: $page, pageSize: $pageSize, filters: $filters, sortBy: $sortBy, sortOrder: $sortOrder) {{
+    items {{
+      {spreads}
+    }}
+    pagination {{
+      page
+      pageSize
+      total
+      hasNextPage
+      hasPreviousPage
+    }}
+  }}
+}}
+
+{fragments_str}"""
+
+        return query
+
+    def build_search(self, search_query: str, pagination: Optional[PaginationArgs] = None) -> str:
+        """Build query to search time entries.
+
+        Args:
+            search_query: Search query string
+            pagination: Pagination settings
+
+        Returns:
+            GraphQL query string
+        """
+        self.add_variable("query", "String!", search_query)
+
+        if pagination:
+            self.add_variable("page", "Int!", pagination.page)
+            self.add_variable("pageSize", "Int!", pagination.pageSize)
+        else:
+            self.add_variable("page", "Int!", 1)
+            self.add_variable("pageSize", "Int!", 50)
+
+        fragments_str = build_fragments_string(self._fragments)
+        spreads = "\n      ".join(f"...{name}" for name in sorted(self._fragments))
+
+        query = f"""query SearchTimeEntries($query: String!, $page: Int!, $pageSize: Int!) {{
+  searchTimeEntries(query: $query, page: $page, pageSize: $pageSize) {{
+    items {{
+      {spreads}
+    }}
+    pagination {{
+      page
+      pageSize
+      total
+      hasNextPage
+      hasPreviousPage
+    }}
+  }}
+}}
+
+{fragments_str}"""
+
+        return query
+
+
+class TimerQueryBuilder(SelectionQueryBuilder):
+    """Builder for timer-related queries."""
+
+    def __init__(self):
+        """Initialize timer query builder."""
+        super().__init__()
+
+        # Add fragments for timers
+        fragments = get_timer_fields()
+        self.add_fragments(fragments)
+
+    def build_get(self, timer_id: str) -> str:
+        """Build query to get a single timer.
+
+        Args:
+            timer_id: Timer ID
+
+        Returns:
+            GraphQL query string
+        """
+        self.add_variable("id", "ID!", timer_id)
+
+        fragments_str = build_fragments_string(self._fragments)
+        spreads = "\n  ".join(f"...{name}" for name in sorted(self._fragments))
+
+        query = f"""query GetTimer($id: ID!) {{
+  timer(id: $id) {{
+    {spreads}
+  }}
+}}
+
+{fragments_str}"""
+
+        return query
+
+    def build_list(
+        self,
+        filter_obj: Optional[TimerFilter] = None,
+        pagination: Optional[PaginationArgs] = None,
+    ) -> str:
+        """Build query to list timers.
+
+        Args:
+            filter_obj: Filter conditions
+            pagination: Pagination settings
+
+        Returns:
+            GraphQL query string
+        """
+        # Add variables
+        if filter_obj:
+            self.add_variable("filters", "TimerFilter", serialize_input(filter_obj))
+
+        if pagination:
+            self.add_variable("page", "Int!", pagination.page)
+            self.add_variable("pageSize", "Int!", pagination.pageSize)
+        else:
+            self.add_variable("page", "Int!", 1)
+            self.add_variable("pageSize", "Int!", 50)
+
+        fragments_str = build_fragments_string(self._fragments)
+        spreads = "\n      ".join(f"...{name}" for name in sorted(self._fragments))
+
+        query = f"""query ListTimers($page: Int!, $pageSize: Int!, $filters: TimerFilter) {{
+  timers(page: $page, pageSize: $pageSize, filters: $filters) {{
+    items {{
+      {spreads}
+    }}
+    pagination {{
+      page
+      pageSize
+      total
+      hasNextPage
+      hasPreviousPage
+    }}
+  }}
+}}
+
+{fragments_str}"""
+
+        return query
+
+    def build_active_timer(self, user_id: str) -> str:
+        """Build query to get active timer for a user.
+
+        Args:
+            user_id: User ID
+
+        Returns:
+            GraphQL query string
+        """
+        self.add_variable("userId", "ID!", user_id)
+
+        fragments_str = build_fragments_string(self._fragments)
+        spreads = "\n  ".join(f"...{name}" for name in sorted(self._fragments))
+
+        query = f"""query GetActiveTimer($userId: ID!) {{
+  activeTimer(userId: $userId) {{
+    {spreads}
+  }}
+}}
+
+{fragments_str}"""
+
+        return query
+
+
+class TimeEntryMutationBuilder(MutationBuilder):
+    """Builder for time entry mutations."""
+
+    def __init__(self, detail_level: str = "core"):
+        """Initialize time entry mutation builder.
+
+        Args:
+            detail_level: Level of detail for returned fields
+        """
+        super().__init__()
+        self._detail_level = detail_level
+
+        # Add fragments for time entries
+        fragments = get_time_entry_fields(detail_level)
+        self.add_fragments(fragments)
+
+    def build_create(self, input_data: TimeEntryInput) -> str:
+        """Build mutation to create a time entry.
+
+        Args:
+            input_data: Time entry input data
+
+        Returns:
+            GraphQL mutation string
+        """
+        self.add_variable("input", "CreateTimeEntryInput!", serialize_input(input_data))
+
+        fragments_str = build_fragments_string(self._fragments)
+        spreads = "\n  ".join(f"...{name}" for name in sorted(self._fragments))
+
+        mutation = f"""mutation CreateTimeEntry($input: CreateTimeEntryInput!) {{
+  createTimeEntry(input: $input) {{
+    {spreads}
+  }}
+}}
+
+{fragments_str}"""
+
+        return mutation
+
+    def build_update(self, time_entry_id: str, input_data: TimeEntryInput) -> str:
+        """Build mutation to update a time entry.
+
+        Args:
+            time_entry_id: Time entry ID
+            input_data: Time entry input data
+
+        Returns:
+            GraphQL mutation string
+        """
+        self.add_variable("id", "ID!", time_entry_id)
+        self.add_variable("input", "UpdateTimeEntryInput!", serialize_input(input_data))
+
+        fragments_str = build_fragments_string(self._fragments)
+        spreads = "\n  ".join(f"...{name}" for name in sorted(self._fragments))
+
+        mutation = f"""mutation UpdateTimeEntry($id: ID!, $input: UpdateTimeEntryInput!) {{
+  updateTimeEntry(id: $id, input: $input) {{
+    {spreads}
+  }}
+}}
+
+{fragments_str}"""
+
+        return mutation
+
+    def build_delete(self, time_entry_id: str) -> str:
+        """Build mutation to delete a time entry.
+
+        Args:
+            time_entry_id: Time entry ID
+
+        Returns:
+            GraphQL mutation string
+        """
+        self.add_variable("id", "ID!", time_entry_id)
+
+        mutation = """mutation DeleteTimeEntry($id: ID!) {
+  deleteTimeEntry(id: $id) {
+    success
+    message
+  }
+}"""
+
+        return mutation
+
+    def build_bulk_approve(self, approval_input: TimeEntryApprovalInput) -> str:
+        """Build mutation to bulk approve/reject time entries.
+
+        Args:
+            approval_input: Approval input data
+
+        Returns:
+            GraphQL mutation string
+        """
+        self.add_variable("input", "TimeEntryApprovalInput!", serialize_input(approval_input))
+
+        fragments_str = build_fragments_string(self._fragments)
+        spreads = "\n      ".join(f"...{name}" for name in sorted(self._fragments))
+
+        mutation = f"""mutation BulkApproveTimeEntries($input: TimeEntryApprovalInput!) {{
+  bulkApproveTimeEntries(input: $input) {{
+    timeEntries {{
+      {spreads}
+    }}
+    success
+    message
+  }}
+}}
+
+{fragments_str}"""
+
+        return mutation
+
+
+class TimerMutationBuilder(MutationBuilder):
+    """Builder for timer mutations."""
+
+    def __init__(self):
+        """Initialize timer mutation builder."""
+        super().__init__()
+
+        # Add fragments for timers
+        fragments = get_timer_fields()
+        self.add_fragments(fragments)
+
+    def build_start(self, input_data: TimerInput) -> str:
+        """Build mutation to start a timer.
+
+        Args:
+            input_data: Timer input data
+
+        Returns:
+            GraphQL mutation string
+        """
+        self.add_variable("input", "StartTimerInput!", serialize_input(input_data))
+
+        fragments_str = build_fragments_string(self._fragments)
+        spreads = "\n  ".join(f"...{name}" for name in sorted(self._fragments))
+
+        mutation = f"""mutation StartTimer($input: StartTimerInput!) {{
+  startTimer(input: $input) {{
+    {spreads}
+  }}
+}}
+
+{fragments_str}"""
+
+        return mutation
+
+    def build_stop(self, timer_id: str) -> str:
+        """Build mutation to stop a timer.
+
+        Args:
+            timer_id: Timer ID
+
+        Returns:
+            GraphQL mutation string
+        """
+        self.add_variable("timerId", "ID!", timer_id)
+
+        fragments_str = build_fragments_string(self._fragments)
+        time_entry_fragments = get_time_entry_fields("core")
+        combined_fragments = self._fragments.union(time_entry_fragments)
+        all_fragments_str = build_fragments_string(combined_fragments)
+
+        timer_spreads = "\n    ".join(f"...{name}" for name in sorted(self._fragments))
+        time_entry_spreads = "\n    ".join(f"...{name}" for name in sorted(time_entry_fragments))
+
+        mutation = f"""mutation StopTimer($timerId: ID!) {{
+  stopTimer(timerId: $timerId) {{
+    timer {{
+      {timer_spreads}
+    }}
+    timeEntry {{
+      {time_entry_spreads}
+    }}
+  }}
+}}
+
+{all_fragments_str}"""
+
+        return mutation
+
+    def build_pause(self, timer_id: str) -> str:
+        """Build mutation to pause a timer.
+
+        Args:
+            timer_id: Timer ID
+
+        Returns:
+            GraphQL mutation string
+        """
+        self.add_variable("timerId", "ID!", timer_id)
+
+        fragments_str = build_fragments_string(self._fragments)
+        spreads = "\n  ".join(f"...{name}" for name in sorted(self._fragments))
+
+        mutation = f"""mutation PauseTimer($timerId: ID!) {{
+  pauseTimer(timerId: $timerId) {{
+    {spreads}
+  }}
+}}
+
+{fragments_str}"""
+
+        return mutation
+
+    def build_resume(self, timer_id: str) -> str:
+        """Build mutation to resume a timer.
+
+        Args:
+            timer_id: Timer ID
+
+        Returns:
+            GraphQL mutation string
+        """
+        self.add_variable("timerId", "ID!", timer_id)
+
+        fragments_str = build_fragments_string(self._fragments)
+        spreads = "\n  ".join(f"...{name}" for name in sorted(self._fragments))
+
+        mutation = f"""mutation ResumeTimer($timerId: ID!) {{
+  resumeTimer(timerId: $timerId) {{
+    {spreads}
+  }}
+}}
+
+{fragments_str}"""
+
+        return mutation
+
+
+# Factory functions for time entry builders
+def create_time_entry_query_builder(detail_level: str = "core") -> TimeEntryQueryBuilder:
+    """Create a time entry query builder.
+
+    Args:
+        detail_level: Level of detail (summary, core, full)
+
+    Returns:
+        TimeEntryQueryBuilder instance
+    """
+    return TimeEntryQueryBuilder(detail_level)
+
+
+def create_timer_query_builder() -> TimerQueryBuilder:
+    """Create a timer query builder.
+
+    Returns:
+        TimerQueryBuilder instance
+    """
+    return TimerQueryBuilder()
+
+
+def create_time_entry_mutation_builder(detail_level: str = "core") -> TimeEntryMutationBuilder:
+    """Create a time entry mutation builder.
+
+    Args:
+        detail_level: Level of detail for returned fields
+
+    Returns:
+        TimeEntryMutationBuilder instance
+    """
+    return TimeEntryMutationBuilder(detail_level)
+
+
 def create_task_query_builder(
     detail_level: str = "core",
     include_comments: bool = False,
@@ -1805,3 +2324,12 @@ def create_user_mutation_builder(detail_level: str = "core") -> UserMutationBuil
         UserMutationBuilder instance
     """
     return UserMutationBuilder(detail_level)
+
+
+def create_timer_mutation_builder() -> TimerMutationBuilder:
+    """Create a timer mutation builder.
+
+    Returns:
+        TimerMutationBuilder instance
+    """
+    return TimerMutationBuilder()

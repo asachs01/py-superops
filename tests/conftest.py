@@ -16,6 +16,9 @@ from py_superops.graphql.types import (
     TaskStatus,
     TicketPriority,
     TicketStatus,
+    TimeEntryStatus,
+    TimeEntryType,
+    TimerState,
 )
 
 # Test configuration fixtures
