@@ -1,3 +1,7 @@
+# # Copyright (c) 2025 Aaron Sachs
+# # Licensed under the MIT License.
+# # See LICENSE file in the project root for full license information.
+
 # Copyright (c) 2025 Aaron Sachs
 # Licensed under the MIT License.
 # See LICENSE file in the project root for full license information.
@@ -198,6 +202,42 @@ class SuperOpsClient:
 
             self._time_entries_manager = TimeEntriesManager(self)
         return self._time_entries_manager
+
+    @property
+    def comments(self) -> "CommentsManager":
+        """Get the comments manager for comment operations."""
+        if not hasattr(self, "_comments_manager") or self._comments_manager is None:
+            from .managers import CommentsManager
+
+            self._comments_manager = CommentsManager(self)
+        return self._comments_manager
+
+    @property
+    def scripts(self) -> "ScriptsManager":
+        """Get the scripts manager for script operations."""
+        if not hasattr(self, "_scripts_manager") or self._scripts_manager is None:
+            from .managers import ScriptsManager
+
+            self._scripts_manager = ScriptsManager(self)
+        return self._scripts_manager
+
+    @property
+    def users(self) -> "UsersManager":
+        """Get the users manager for user operations."""
+        if not hasattr(self, "_users_manager") or self._users_manager is None:
+            from .managers import UsersManager
+
+            self._users_manager = UsersManager(self)
+        return self._users_manager
+
+    @property
+    def webhooks(self) -> "WebhooksManager":
+        """Get the webhooks manager for webhook operations."""
+        if not hasattr(self, "_webhooks_manager") or self._webhooks_manager is None:
+            from .managers import WebhooksManager
+
+            self._webhooks_manager = WebhooksManager(self)
+        return self._webhooks_manager
 
     async def __aenter__(self) -> "SuperOpsClient":
         """Async context manager entry."""
