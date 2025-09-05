@@ -104,13 +104,13 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python-version: ["3.9", "3.10", "3.11", "3.12"]
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
         exclude:
           # Reduce matrix size for resource efficiency
           - os: macos-latest
-            python-version: "3.9"
+            python-version: "3.8"
           - os: windows-latest
-            python-version: "3.9"
+            python-version: "3.8"
 
     steps:
       - uses: actions/checkout@v4
@@ -151,7 +151,7 @@ jobs:
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
         uses: codecov/codecov-action@v4
         with:
-          file: ./coverage.xml
+          file: coverage.xml
           flags: unittests
           name: codecov-umbrella
           fail_ci_if_error: false
@@ -313,6 +313,7 @@ jobs:
   ci-success:
     name: CI Success
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     needs: [security, code-quality, test, build]
     if: always()
 
