@@ -4,14 +4,14 @@ build-backend = "hatchling.build"
 
 [project]
 name = "py-superops"
-description = "Python client library for the SuperOps GraphQL API"
+description = "Python client library for the SuperOps GraphQL API with async support, type safety, and comprehensive error handling"
 readme = "README.md"
 license = { text = "MIT" }
 authors = [
-    { name = "SuperOps Team", email = "support@superops.com" }
+    { name = "Aaron Sachs", email = "aaron@wyre.com" }
 ]
 maintainers = [
-    { name = "SuperOps Team", email = "support@superops.com" }
+    { name = "Aaron Sachs", email = "aaron@wyre.com" }
 ]
 keywords = [
     "superops",
@@ -103,11 +103,11 @@ examples = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/superops/py-superops"
+Homepage = "https://github.com/asachs01/py-superops"
 Documentation = "https://py-superops.readthedocs.io"
-Repository = "https://github.com/superops/py-superops.git"
-Issues = "https://github.com/superops/py-superops/issues"
-Changelog = "https://github.com/superops/py-superops/blob/main/CHANGELOG.md"
+Repository = "https://github.com/asachs01/py-superops.git"
+Issues = "https://github.com/asachs01/py-superops/issues"
+Changelog = "https://github.com/asachs01/py-superops/blob/main/CHANGELOG.md"
 
 [project.scripts]
 superops-cli = "py_superops.cli:main"
