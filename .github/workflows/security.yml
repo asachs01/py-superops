@@ -81,7 +81,6 @@ jobs:
         uses: actions/dependency-review-action@v4
         with:
           fail-on-severity: moderate
-          allow-ghsas: GHSA-example-1234-abcd  # Example allowlist
           deny-licenses: GPL-2.0, GPL-3.0
 
   # Advanced Security Scanning
@@ -207,7 +206,7 @@ jobs:
         run: |
           pip install -e .
           cyclone-dx py --format json --output-file sbom.json
-          cyclone-x py --format xml --output-file sbom.xml
+          cyclone-dx py --format xml --output-file sbom.xml
 
       - name: Upload SBOM
         uses: actions/upload-artifact@v4
