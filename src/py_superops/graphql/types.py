@@ -2489,6 +2489,224 @@ class ExecutionTrigger(str, Enum):
     CONDITION_BASED = "CONDITION_BASED"
 
 
+# Script Types
+@dataclass
+class ScriptParameter(BaseModel):
+    """Script parameter model."""
+
+    script_id: str
+    name: str
+    parameter_type: str  # STRING, INTEGER, BOOLEAN, FILE, etc.
+    description: Optional[str] = None
+    default_value: Optional[str] = None
+    is_required: bool = False
+    is_sensitive: bool = False  # for passwords, keys, etc.
+    validation_regex: Optional[str] = None
+    allowed_values: List[str] = field(default_factory=list)
+    display_order: int = 0
+
+
+@dataclass 
+class ScriptTemplate(BaseModel):
+    """Script template model."""
+
+    name: str
+    description: str
+    script_type: ScriptType
+    category: ScriptCategory = ScriptCategory.CUSTOM
+    script_content: Optional[str] = None
+    parameters: List[ScriptParameter] = field(default_factory=list)
+    is_public: bool = False
+    author_id: Optional[str] = None
+    author_name: Optional[str] = None
+    version: str = "1.0.0"
+    usage_count: int = 0
+    tags: List[str] = field(default_factory=list)
+    custom_fields: Dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class Script(BaseModel):
+    """Script model."""
+
+    name: str
+    description: Optional[str] = None
+    script_type: ScriptType = ScriptType.POWERSHELL
+    category: ScriptCategory = ScriptCategory.CUSTOM
+    script_content: str = ""
+    
+    # Deployment and status
+    deployment_status: DeploymentStatus = DeploymentStatus.DRAFT
+    is_template: bool = False
+    template_id: Optional[str] = None
+    
+    # Author and ownership
+    author_id: Optional[str] = None
+    author_name: Optional[str] = None
+    library_id: Optional[str] = None
+    
+    # Execution settings
+    timeout_seconds: Optional[int] = None
+    retry_count: int = 0
+    run_as_user: Optional[str] = None
+    requires_elevation: bool = False
+    
+    # Parameters and configuration
+    parameters: List[ScriptParameter] = field(default_factory=list)
+    environment_variables: Dict[str, str] = field(default_factory=dict)
+    working_directory: Optional[str] = None
+    
+    # Metadata and organization
+    version: str = "1.0.0"
+    tags: List[str] = field(default_factory=list)
+    is_public: bool = False
+    usage_count: int = 0
+    last_executed: Optional[datetime] = None
+    custom_fields: Dict[str, Any] = field(default_factory=dict)
+    
+    # File and checksum information
+    file_hash: Optional[str] = None
+    file_size: Optional[int] = None
+
+
+@dataclass
+class ScriptExecution(BaseModel):
+    """Script execution model."""
+
+    script_id: str
+    script_name: Optional[str] = None
+    status: ExecutionStatus = ExecutionStatus.PENDING
+    execution_trigger: ExecutionTrigger = ExecutionTrigger.MANUAL
+    
+    # Execution metadata
+    started_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+    duration_seconds: Optional[int] = None
+    executed_by: Optional[str] = None
+    executed_by_name: Optional[str] = None
+    
+    # Target information
+    target_assets: List[str] = field(default_factory=list)
+    target_sites: List[str] = field(default_factory=list)
+    target_clients: List[str] = field(default_factory=list)
+    
+    # Execution parameters and results
+    parameters: Dict[str, Any] = field(default_factory=dict)
+    environment_variables: Dict[str, str] = field(default_factory=dict)
+    exit_code: Optional[int] = None
+    output: Optional[str] = None
+    error_output: Optional[str] = None
+    
+    # Progress and statistics
+    total_targets: int = 0
+    successful_targets: int = 0
+    failed_targets: int = 0
+    progress_percentage: Optional[int] = None
+    
+    # Execution settings
+    timeout_seconds: Optional[int] = None
+    retry_count: int = 0
+    current_retry: int = 0
+    
+    # Scheduling information
+    scheduled_at: Optional[datetime] = None
+    deployment_id: Optional[str] = None
+    
+    # Error and failure information
+    failure_reason: Optional[str] = None
+    cancellation_reason: Optional[str] = None
+    
+    # Logs and output details
+    execution_log: List[str] = field(default_factory=list)
+    target_results: List[Dict[str, Any]] = field(default_factory=list)
+
+
+@dataclass
+class ScriptDeployment(BaseModel):
+    """Script deployment model."""
+
+    script_id: str
+    deployment_name: str
+    script_name: Optional[str] = None
+    deployment_status: DeploymentStatus = DeploymentStatus.DRAFT
+    
+    # Target configuration
+    target_type: str = "all"  # 'asset', 'site', 'client', 'all'
+    target_ids: List[str] = field(default_factory=list)
+    target_criteria: Optional[Dict[str, Any]] = None
+    
+    # Scheduling
+    schedule_expression: Optional[str] = None  # cron expression
+    next_run_at: Optional[datetime] = None
+    last_run_at: Optional[datetime] = None
+    is_enabled: bool = True
+    
+    # Execution configuration
+    timeout_seconds: Optional[int] = None
+    retry_count: int = 0
+    run_as_user: Optional[str] = None
+    requires_elevation: bool = False
+    
+    # Parameters and environment
+    parameters: Dict[str, Any] = field(default_factory=dict)
+    environment_variables: Dict[str, str] = field(default_factory=dict)
+    configuration: Dict[str, Any] = field(default_factory=dict)
+    
+    # Deployment metadata
+    created_by: Optional[str] = None
+    created_by_name: Optional[str] = None
+    last_modified_by: Optional[str] = None
+    description: Optional[str] = None
+    tags: List[str] = field(default_factory=list)
+    
+    # Statistics and monitoring
+    total_executions: int = 0
+    successful_executions: int = 0
+    failed_executions: int = 0
+    average_execution_time: Optional[float] = None
+    last_execution_status: Optional[ExecutionStatus] = None
+    
+    # Notification settings
+    notify_on_success: bool = False
+    notify_on_failure: bool = True
+    notification_recipients: List[str] = field(default_factory=list)
+
+
+@dataclass
+class ScriptLibrary(BaseModel):
+    """Script library model."""
+
+    name: str
+    description: str
+    owner_id: Optional[str] = None
+    owner_name: Optional[str] = None
+    is_public: bool = False
+    
+    # Organization and metadata
+    tags: List[str] = field(default_factory=list)
+    category: Optional[str] = None
+    
+    # Statistics
+    script_count: int = 0
+    template_count: int = 0
+    subscriber_count: int = 0
+    usage_count: int = 0
+    
+    # Access control
+    shared_with_users: List[str] = field(default_factory=list)
+    shared_with_teams: List[str] = field(default_factory=list)
+    permissions: Dict[str, Any] = field(default_factory=dict)
+    
+    # Content organization
+    featured_scripts: List[str] = field(default_factory=list)
+    recent_scripts: List[str] = field(default_factory=list)
+    
+    # Metadata
+    last_updated_by: Optional[str] = None
+    version: str = "1.0.0"
+    custom_fields: Dict[str, Any] = field(default_factory=dict)
+
+
 # Monitoring Data Classes
 @dataclass
 class MonitoringAgent:
@@ -2775,6 +2993,117 @@ class MonitoringMetricInput:
     metadata: Optional[Dict[str, Any]] = None
 
 
+# Script Input Types
+@dataclass
+class ScriptInput:
+    """Script creation/update input."""
+
+    name: str
+    description: Optional[str] = None
+    script_type: Optional[ScriptType] = None
+    category: Optional[ScriptCategory] = None
+    script_content: Optional[str] = None
+    deployment_status: Optional[DeploymentStatus] = None
+    is_template: Optional[bool] = None
+    template_id: Optional[str] = None
+    library_id: Optional[str] = None
+    timeout_seconds: Optional[int] = None
+    retry_count: Optional[int] = None
+    run_as_user: Optional[str] = None
+    requires_elevation: Optional[bool] = None
+    environment_variables: Optional[Dict[str, str]] = None
+    working_directory: Optional[str] = None
+    version: Optional[str] = None
+    tags: Optional[List[str]] = None
+    is_public: Optional[bool] = None
+    custom_fields: Optional[Dict[str, Any]] = None
+
+
+@dataclass
+class ScriptExecutionInput:
+    """Script execution input."""
+
+    script_id: str
+    execution_trigger: Optional[ExecutionTrigger] = None
+    target_assets: Optional[List[str]] = None
+    target_sites: Optional[List[str]] = None
+    target_clients: Optional[List[str]] = None
+    parameters: Optional[Dict[str, Any]] = None
+    environment_variables: Optional[Dict[str, str]] = None
+    timeout_seconds: Optional[int] = None
+    retry_count: Optional[int] = None
+    scheduled_at: Optional[datetime] = None
+
+
+@dataclass
+class ScriptDeploymentInput:
+    """Script deployment creation/update input."""
+
+    script_id: str
+    deployment_name: str
+    target_type: str
+    deployment_status: Optional[DeploymentStatus] = None
+    target_ids: Optional[List[str]] = None
+    target_criteria: Optional[Dict[str, Any]] = None
+    schedule_expression: Optional[str] = None
+    is_enabled: Optional[bool] = None
+    timeout_seconds: Optional[int] = None
+    retry_count: Optional[int] = None
+    run_as_user: Optional[str] = None
+    requires_elevation: Optional[bool] = None
+    parameters: Optional[Dict[str, Any]] = None
+    environment_variables: Optional[Dict[str, str]] = None
+    configuration: Optional[Dict[str, Any]] = None
+    description: Optional[str] = None
+    tags: Optional[List[str]] = None
+    notify_on_success: Optional[bool] = None
+    notify_on_failure: Optional[bool] = None
+    notification_recipients: Optional[List[str]] = None
+
+
+@dataclass
+class ScriptLibraryInput:
+    """Script library creation/update input."""
+
+    name: str
+    description: str
+    is_public: Optional[bool] = None
+    tags: Optional[List[str]] = None
+    category: Optional[str] = None
+    custom_fields: Optional[Dict[str, Any]] = None
+
+
+@dataclass
+class ScriptParameterInput:
+    """Script parameter creation/update input."""
+
+    script_id: str
+    name: str
+    parameter_type: str
+    description: Optional[str] = None
+    default_value: Optional[str] = None
+    is_required: Optional[bool] = None
+    is_sensitive: Optional[bool] = None
+    validation_regex: Optional[str] = None
+    allowed_values: Optional[List[str]] = None
+    display_order: Optional[int] = None
+
+
+@dataclass
+class ScriptTemplateInput:
+    """Script template creation/update input."""
+
+    name: str
+    description: str
+    script_type: ScriptType
+    category: Optional[ScriptCategory] = None
+    script_content: Optional[str] = None
+    is_public: Optional[bool] = None
+    version: Optional[str] = None
+    tags: Optional[List[str]] = None
+    custom_fields: Optional[Dict[str, Any]] = None
+
+
 @dataclass
 class MonitoringAgentFilter:
     """Filter for monitoring agent queries."""
@@ -2828,6 +3157,82 @@ class MonitoringAlertFilter:
     resolved: Optional[bool] = None
     created_after: Optional[datetime] = None
     created_before: Optional[datetime] = None
+
+
+# Script Filter Types
+@dataclass
+class ScriptFilter:
+    """Script query filter."""
+
+    name: Optional[str] = None
+    script_type: Optional[ScriptType] = None
+    category: Optional[ScriptCategory] = None
+    deployment_status: Optional[DeploymentStatus] = None
+    author_id: Optional[str] = None
+    library_id: Optional[str] = None
+    is_template: Optional[bool] = None
+    template_id: Optional[str] = None
+    is_public: Optional[bool] = None
+    tags: Optional[List[str]] = None
+    created_after: Optional[datetime] = None
+    created_before: Optional[datetime] = None
+    last_executed_after: Optional[datetime] = None
+    last_executed_before: Optional[datetime] = None
+
+
+@dataclass
+class ScriptExecutionFilter:
+    """Script execution query filter."""
+
+    script_id: Optional[str] = None
+    status: Optional[ExecutionStatus] = None
+    execution_trigger: Optional[ExecutionTrigger] = None
+    executed_by: Optional[str] = None
+    deployment_id: Optional[str] = None
+    started_after: Optional[datetime] = None
+    started_before: Optional[datetime] = None
+    completed_after: Optional[datetime] = None
+    completed_before: Optional[datetime] = None
+    duration_min: Optional[int] = None
+    duration_max: Optional[int] = None
+    has_failures: Optional[bool] = None
+    target_assets: Optional[List[str]] = None
+    target_sites: Optional[List[str]] = None
+    target_clients: Optional[List[str]] = None
+
+
+@dataclass
+class ScriptDeploymentFilter:
+    """Script deployment query filter."""
+
+    script_id: Optional[str] = None
+    deployment_name: Optional[str] = None
+    deployment_status: Optional[DeploymentStatus] = None
+    target_type: Optional[str] = None
+    is_enabled: Optional[bool] = None
+    created_by: Optional[str] = None
+    tags: Optional[List[str]] = None
+    created_after: Optional[datetime] = None
+    created_before: Optional[datetime] = None
+    next_run_after: Optional[datetime] = None
+    next_run_before: Optional[datetime] = None
+    last_run_after: Optional[datetime] = None
+    last_run_before: Optional[datetime] = None
+
+
+@dataclass
+class ScriptLibraryFilter:
+    """Script library query filter."""
+
+    name: Optional[str] = None
+    owner_id: Optional[str] = None
+    is_public: Optional[bool] = None
+    category: Optional[str] = None
+    tags: Optional[List[str]] = None
+    created_after: Optional[datetime] = None
+    created_before: Optional[datetime] = None
+    script_count_min: Optional[int] = None
+    script_count_max: Optional[int] = None
 
 
 @dataclass

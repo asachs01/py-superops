@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, TYPE_CHECKING
 
 from ..exceptions import SuperOpsAPIError, SuperOpsValidationError
 from ..graphql.types import (
@@ -36,25 +36,31 @@ from ..graphql.types import (
 )
 from .base import ResourceManager
 
+if TYPE_CHECKING:
+    from ..config import SuperOpsConfig
 
-class MonitoringManager:
+
+class MonitoringManager(ResourceManager[MonitoringAgent]):
     """Manager for monitoring operations.
 
     Provides comprehensive monitoring functionality including agent management,
     check creation and management, alert handling, and metric collection.
     """
 
-    def __init__(self, client: "SuperOpsClient"):
+    def __init__(self, config: "SuperOpsConfig"):
         """Initialize the monitoring manager.
 
         Args:
-            client: SuperOps client instance
+            config: SuperOps configuration instance
         """
-        self.client = client
-        self.logger = client.logger
+        # For now, we'll need to create a client from config or get it another way
+        # This is a pattern change the user requested
+        from ..client import SuperOpsClient
+        client = SuperOpsClient(config)
+        super().__init__(client, MonitoringAgent, "monitoringAgent")
 
-    # Agent Management
-    async def get_agent(self, agent_id: str, detail_level: str = "full") -> MonitoringAgent:
+    # Agent Management (using base ResourceManager methods)
+    async def get_agent(self, agent_id: str, detail_level: str = "full") -> Optional[MonitoringAgent]:
         """Get a monitoring agent by ID.
 
         Args:
@@ -62,27 +68,13 @@ class MonitoringManager:
             detail_level: Level of detail (summary, core, full)
 
         Returns:
-            MonitoringAgent instance
+            MonitoringAgent instance or None if not found
 
         Raises:
             SuperOpsValidationError: If parameters are invalid
             SuperOpsAPIError: If the API request fails
         """
-        if not agent_id or not isinstance(agent_id, str):
-            raise SuperOpsValidationError("Agent ID must be a non-empty string")
-
-        self.logger.debug(f"Getting monitoring agent: {agent_id}")
-
-        from ..graphql.builder import create_monitoring_agent_query_builder
-
-        builder = create_monitoring_agent_query_builder(detail_level)
-        query, variables = builder.get(agent_id)
-
-        response = await self.client.execute_query(query, variables)
-        if not response.get("data") or not response["data"].get("monitoringAgent"):
-            raise SuperOpsAPIError(f"Agent {agent_id} not found", 404, response)
-
-        return MonitoringAgent.from_dict(response["data"]["monitoringAgent"])
+        return await self.get(agent_id, detail_level=detail_level)
 
     async def list_agents(
         self,
@@ -110,27 +102,15 @@ class MonitoringManager:
             SuperOpsValidationError: If parameters are invalid
             SuperOpsAPIError: If the API request fails
         """
-        self.logger.debug("Listing monitoring agents")
-
-        from ..graphql.builder import create_monitoring_agent_query_builder
-        from ..graphql.types import PaginationArgs, SortArgs
-
-        builder = create_monitoring_agent_query_builder(detail_level)
-
-        pagination = PaginationArgs(page=page, page_size=page_size) if page or page_size else None
-        sort = SortArgs(sort_by=sort_by or "created_at", sort_order=sort_order) if sort_by else None
-
-        query, variables = builder.list(filter=filter, pagination=pagination, sort=sort)
-
-        response = await self.client.execute_query(query, variables)
-        if not response.get("data") or not response["data"].get("monitoringAgents"):
-            return {"items": [], "pagination": self._empty_pagination()}
-
-        agents_data = response["data"]["monitoringAgents"]
-        items = [MonitoringAgent.from_dict(item) for item in agents_data.get("items", [])]
-        pagination_info = agents_data.get("pagination", self._empty_pagination())
-
-        return {"items": items, "pagination": pagination_info}
+        filters = filter.__dict__ if filter else None
+        return await self.list(
+            page=page,
+            page_size=page_size,
+            filters=filters,
+            sort_by=sort_by or "created_at",
+            sort_order=sort_order,
+            detail_level=detail_level,
+        )
 
     async def create_agent(
         self,
@@ -160,30 +140,16 @@ class MonitoringManager:
             SuperOpsValidationError: If parameters are invalid
             SuperOpsAPIError: If the API request fails
         """
-        if not name or not isinstance(name, str):
-            raise SuperOpsValidationError("Agent name must be a non-empty string")
-
-        self.logger.debug(f"Creating monitoring agent: {name}")
-
-        from ..graphql.builder import create_monitoring_agent_mutation_builder
-
-        agent_input = MonitoringAgentInput(
-            name=name,
-            description=description,
-            host_name=host_name,
-            ip_address=ip_address,
-            config=config,
-            tags=tags,
-        )
-
-        builder = create_monitoring_agent_mutation_builder(detail_level)
-        mutation, variables = builder.create(agent_input)
-
-        response = await self.client.execute_mutation(mutation, variables)
-        if not response.get("data") or not response["data"].get("createMonitoringAgent"):
-            raise SuperOpsAPIError("Failed to create monitoring agent", 500, response)
-
-        return MonitoringAgent.from_dict(response["data"]["createMonitoringAgent"])
+        data = {
+            "name": name,
+            "description": description,
+            "host_name": host_name,
+            "ip_address": ip_address,
+            "config": config,
+            "tags": tags,
+        }
+        
+        return await self.create(data, detail_level=detail_level)
 
     async def update_agent(
         self,
@@ -211,57 +177,32 @@ class MonitoringManager:
             SuperOpsValidationError: If parameters are invalid
             SuperOpsAPIError: If the API request fails
         """
-        if not agent_id or not isinstance(agent_id, str):
-            raise SuperOpsValidationError("Agent ID must be a non-empty string")
+        data = {}
+        if name is not None:
+            data["name"] = name
+        if description is not None:
+            data["description"] = description
+        if config is not None:
+            data["config"] = config
+        if tags is not None:
+            data["tags"] = tags
+        
+        return await self.update(agent_id, data, detail_level=detail_level)
 
-        self.logger.debug(f"Updating monitoring agent: {agent_id}")
-
-        from ..graphql.builder import create_monitoring_agent_mutation_builder
-
-        agent_input = MonitoringAgentInput(
-            name=name or "",  # Required field
-            description=description,
-            config=config,
-            tags=tags,
-        )
-
-        builder = create_monitoring_agent_mutation_builder(detail_level)
-        mutation, variables = builder.update(agent_id, agent_input)
-
-        response = await self.client.execute_mutation(mutation, variables)
-        if not response.get("data") or not response["data"].get("updateMonitoringAgent"):
-            raise SuperOpsAPIError("Failed to update monitoring agent", 500, response)
-
-        return MonitoringAgent.from_dict(response["data"]["updateMonitoringAgent"])
-
-    async def delete_agent(self, agent_id: str) -> Dict[str, Any]:
+    async def delete_agent(self, agent_id: str) -> bool:
         """Delete a monitoring agent.
 
         Args:
             agent_id: Agent ID
 
         Returns:
-            Dictionary with success status and message
+            True if deletion was successful
 
         Raises:
             SuperOpsValidationError: If parameters are invalid
             SuperOpsAPIError: If the API request fails
         """
-        if not agent_id or not isinstance(agent_id, str):
-            raise SuperOpsValidationError("Agent ID must be a non-empty string")
-
-        self.logger.debug(f"Deleting monitoring agent: {agent_id}")
-
-        from ..graphql.builder import create_monitoring_agent_mutation_builder
-
-        builder = create_monitoring_agent_mutation_builder()
-        mutation, variables = builder.delete(agent_id)
-
-        response = await self.client.execute_mutation(mutation, variables)
-        if not response.get("data") or not response["data"].get("deleteMonitoringAgent"):
-            raise SuperOpsAPIError("Failed to delete monitoring agent", 500, response)
-
-        return response["data"]["deleteMonitoringAgent"]
+        return await self.delete(agent_id)
 
     async def install_agent(
         self,
@@ -1330,3 +1271,301 @@ class MonitoringManager:
         from ..graphql.builder import MonitoringCheckQueryBuilder
 
         return MonitoringCheckQueryBuilder
+
+    # Abstract method implementations required by ResourceManager
+
+    def _build_get_query(self, **kwargs) -> str:
+        """Build GraphQL query for getting a single monitoring agent."""
+        detail_level = kwargs.get("detail_level", "full")
+        
+        base_fields = [
+            "id",
+            "name",
+            "description",
+            "hostName",
+            "ipAddress",
+            "status",
+            "version",
+            "lastSeen",
+            "config",
+            "tags",
+            "createdAt",
+            "updatedAt",
+        ]
+
+        if detail_level == "full":
+            base_fields.extend([
+                "installedAt",
+                "uninstalledAt",
+                "isActive",
+                "metrics",
+                "checks {id name status}",
+            ])
+        elif detail_level == "core":
+            base_fields.extend([
+                "isActive",
+                "lastCheckIn",
+            ])
+
+        fields_str = "\n        ".join(base_fields)
+
+        return f"""
+            query GetMonitoringAgent($id: ID!) {{
+                monitoringAgent(id: $id) {{
+                    {fields_str}
+                }}
+            }}
+        """
+
+    def _build_list_query(self, **kwargs) -> str:
+        """Build GraphQL query for listing monitoring agents."""
+        detail_level = kwargs.get("detail_level", "core")
+
+        base_fields = [
+            "id",
+            "name",
+            "description",
+            "hostName",
+            "ipAddress",
+            "status",
+            "version",
+            "lastSeen",
+            "tags",
+            "createdAt",
+            "updatedAt",
+        ]
+
+        if detail_level == "full":
+            base_fields.extend([
+                "installedAt",
+                "uninstalledAt",
+                "isActive",
+                "config",
+                "metrics",
+            ])
+        elif detail_level == "core":
+            base_fields.extend([
+                "isActive",
+                "lastCheckIn",
+            ])
+
+        fields_str = "\n            ".join(base_fields)
+
+        return f"""
+            query ListMonitoringAgents(
+                $page: Int!
+                $pageSize: Int!
+                $filters: MonitoringAgentFilter
+                $sortBy: String
+                $sortOrder: SortOrder
+            ) {{
+                monitoringAgents(
+                    page: $page
+                    pageSize: $pageSize
+                    filters: $filters
+                    sortBy: $sortBy
+                    sortOrder: $sortOrder
+                ) {{
+                    items {{
+                        {fields_str}
+                    }}
+                    pagination {{
+                        page
+                        pageSize
+                        total
+                        hasNextPage
+                        hasPreviousPage
+                    }}
+                }}
+            }}
+        """
+
+    def _build_create_mutation(self, **kwargs) -> str:
+        """Build GraphQL mutation for creating a monitoring agent."""
+        detail_level = kwargs.get("detail_level", "full")
+
+        fields = [
+            "id",
+            "name",
+            "description",
+            "hostName",
+            "ipAddress",
+            "status",
+            "version",
+            "config",
+            "tags",
+            "createdAt",
+            "updatedAt",
+        ]
+
+        if detail_level == "full":
+            fields.extend([
+                "installedAt",
+                "isActive",
+                "lastSeen",
+            ])
+
+        fields_str = "\n            ".join(fields)
+
+        return f"""
+            mutation CreateMonitoringAgent($input: MonitoringAgentInput!) {{
+                createMonitoringAgent(input: $input) {{
+                    {fields_str}
+                }}
+            }}
+        """
+
+    def _build_update_mutation(self, **kwargs) -> str:
+        """Build GraphQL mutation for updating a monitoring agent."""
+        detail_level = kwargs.get("detail_level", "full")
+
+        fields = [
+            "id",
+            "name",
+            "description",
+            "hostName",
+            "ipAddress",
+            "status",
+            "version",
+            "config",
+            "tags",
+            "createdAt",
+            "updatedAt",
+        ]
+
+        if detail_level == "full":
+            fields.extend([
+                "installedAt",
+                "isActive",
+                "lastSeen",
+            ])
+
+        fields_str = "\n            ".join(fields)
+
+        return f"""
+            mutation UpdateMonitoringAgent($id: ID!, $input: MonitoringAgentInput!) {{
+                updateMonitoringAgent(id: $id, input: $input) {{
+                    {fields_str}
+                }}
+            }}
+        """
+
+    def _build_delete_mutation(self, **kwargs) -> str:
+        """Build GraphQL mutation for deleting a monitoring agent."""
+        return """
+            mutation DeleteMonitoringAgent($id: ID!) {
+                deleteMonitoringAgent(id: $id) {
+                    success
+                    message
+                }
+            }
+        """
+
+    def _build_search_query(self, **kwargs) -> str:
+        """Build GraphQL query for searching monitoring agents."""
+        detail_level = kwargs.get("detail_level", "core")
+
+        fields = [
+            "id",
+            "name",
+            "description",
+            "hostName",
+            "ipAddress",
+            "status",
+            "version",
+            "lastSeen",
+            "tags",
+            "createdAt",
+            "updatedAt",
+        ]
+
+        if detail_level == "full":
+            fields.extend([
+                "installedAt",
+                "isActive",
+                "config",
+            ])
+        elif detail_level == "core":
+            fields.extend([
+                "isActive",
+                "lastCheckIn",
+            ])
+
+        fields_str = "\n            ".join(fields)
+
+        return f"""
+            query SearchMonitoringAgents(
+                $query: String!
+                $page: Int!
+                $pageSize: Int!
+            ) {{
+                searchMonitoringAgents(
+                    query: $query
+                    page: $page
+                    pageSize: $pageSize
+                ) {{
+                    items {{
+                        {fields_str}
+                    }}
+                    pagination {{
+                        page
+                        pageSize
+                        total
+                        hasNextPage
+                        hasPreviousPage
+                    }}
+                }}
+            }}
+        """
+
+    def _validate_create_data(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Validate data for monitoring agent creation."""
+        validated = data.copy()
+        
+        # Required fields
+        if not validated.get("name"):
+            raise SuperOpsValidationError("Agent name is required")
+        
+        # Validate IP address format if provided
+        ip_address = validated.get("ip_address")
+        if ip_address:
+            import ipaddress
+            try:
+                ipaddress.ip_address(ip_address)
+            except ValueError:
+                raise SuperOpsValidationError(f"Invalid IP address format: {ip_address}")
+        
+        # Validate tags format if provided
+        tags = validated.get("tags")
+        if tags is not None:
+            if not isinstance(tags, list):
+                raise SuperOpsValidationError("Tags must be a list")
+            for tag in tags:
+                if not isinstance(tag, str):
+                    raise SuperOpsValidationError("All tags must be strings")
+        
+        return validated
+
+    def _validate_update_data(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Validate data for monitoring agent updates."""
+        validated = data.copy()
+        
+        # Validate IP address format if provided
+        ip_address = validated.get("ip_address")
+        if ip_address:
+            import ipaddress
+            try:
+                ipaddress.ip_address(ip_address)
+            except ValueError:
+                raise SuperOpsValidationError(f"Invalid IP address format: {ip_address}")
+        
+        # Validate tags format if provided
+        tags = validated.get("tags")
+        if tags is not None:
+            if not isinstance(tags, list):
+                raise SuperOpsValidationError("Tags must be a list")
+            for tag in tags:
+                if not isinstance(tag, str):
+                    raise SuperOpsValidationError("All tags must be strings")
+        
+        return validated

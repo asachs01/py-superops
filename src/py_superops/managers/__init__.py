@@ -61,6 +61,7 @@ from .attachments import AttachmentsManager
 from .automation_manager import AutomationManager
 from .base import ResourceManager
 from .clients import ClientManager
+from .monitoring_manager import MonitoringManager
 from .comments import CommentsManager
 from .contacts import ContactManager
 from .contracts import ContractsManager
@@ -84,6 +85,7 @@ __all__ = [
     # Domain-specific managers
     "AutomationManager",
     "ClientManager",
+    "MonitoringManager",
     "TicketManager",
     "TasksManager",
     "AssetManager",
