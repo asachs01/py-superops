@@ -1,6 +1,7 @@
-# # Copyright (c) 2024 SuperOps Team
-# # Licensed under the MIT License.
-# # See LICENSE file in the project root for full license information.
+# Copyright (c) 2025 Aaron Sachs
+# Licensed under the MIT License.
+# See LICENSE file in the project root for full license information.
+
 
 """GraphQL type definitions and response models for SuperOps API.
 
@@ -2506,7 +2507,7 @@ class ScriptParameter(BaseModel):
     display_order: int = 0
 
 
-@dataclass 
+@dataclass
 class ScriptTemplate(BaseModel):
     """Script template model."""
 
@@ -2534,28 +2535,28 @@ class Script(BaseModel):
     script_type: ScriptType = ScriptType.POWERSHELL
     category: ScriptCategory = ScriptCategory.CUSTOM
     script_content: str = ""
-    
+
     # Deployment and status
     deployment_status: DeploymentStatus = DeploymentStatus.DRAFT
     is_template: bool = False
     template_id: Optional[str] = None
-    
+
     # Author and ownership
     author_id: Optional[str] = None
     author_name: Optional[str] = None
     library_id: Optional[str] = None
-    
+
     # Execution settings
     timeout_seconds: Optional[int] = None
     retry_count: int = 0
     run_as_user: Optional[str] = None
     requires_elevation: bool = False
-    
+
     # Parameters and configuration
     parameters: List[ScriptParameter] = field(default_factory=list)
     environment_variables: Dict[str, str] = field(default_factory=dict)
     working_directory: Optional[str] = None
-    
+
     # Metadata and organization
     version: str = "1.0.0"
     tags: List[str] = field(default_factory=list)
@@ -2563,7 +2564,7 @@ class Script(BaseModel):
     usage_count: int = 0
     last_executed: Optional[datetime] = None
     custom_fields: Dict[str, Any] = field(default_factory=dict)
-    
+
     # File and checksum information
     file_hash: Optional[str] = None
     file_size: Optional[int] = None
@@ -2577,45 +2578,45 @@ class ScriptExecution(BaseModel):
     script_name: Optional[str] = None
     status: ExecutionStatus = ExecutionStatus.PENDING
     execution_trigger: ExecutionTrigger = ExecutionTrigger.MANUAL
-    
+
     # Execution metadata
     started_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None
     duration_seconds: Optional[int] = None
     executed_by: Optional[str] = None
     executed_by_name: Optional[str] = None
-    
+
     # Target information
     target_assets: List[str] = field(default_factory=list)
     target_sites: List[str] = field(default_factory=list)
     target_clients: List[str] = field(default_factory=list)
-    
+
     # Execution parameters and results
     parameters: Dict[str, Any] = field(default_factory=dict)
     environment_variables: Dict[str, str] = field(default_factory=dict)
     exit_code: Optional[int] = None
     output: Optional[str] = None
     error_output: Optional[str] = None
-    
+
     # Progress and statistics
     total_targets: int = 0
     successful_targets: int = 0
     failed_targets: int = 0
     progress_percentage: Optional[int] = None
-    
+
     # Execution settings
     timeout_seconds: Optional[int] = None
     retry_count: int = 0
     current_retry: int = 0
-    
+
     # Scheduling information
     scheduled_at: Optional[datetime] = None
     deployment_id: Optional[str] = None
-    
+
     # Error and failure information
     failure_reason: Optional[str] = None
     cancellation_reason: Optional[str] = None
-    
+
     # Logs and output details
     execution_log: List[str] = field(default_factory=list)
     target_results: List[Dict[str, Any]] = field(default_factory=list)
@@ -2629,43 +2630,43 @@ class ScriptDeployment(BaseModel):
     deployment_name: str
     script_name: Optional[str] = None
     deployment_status: DeploymentStatus = DeploymentStatus.DRAFT
-    
+
     # Target configuration
     target_type: str = "all"  # 'asset', 'site', 'client', 'all'
     target_ids: List[str] = field(default_factory=list)
     target_criteria: Optional[Dict[str, Any]] = None
-    
+
     # Scheduling
     schedule_expression: Optional[str] = None  # cron expression
     next_run_at: Optional[datetime] = None
     last_run_at: Optional[datetime] = None
     is_enabled: bool = True
-    
+
     # Execution configuration
     timeout_seconds: Optional[int] = None
     retry_count: int = 0
     run_as_user: Optional[str] = None
     requires_elevation: bool = False
-    
+
     # Parameters and environment
     parameters: Dict[str, Any] = field(default_factory=dict)
     environment_variables: Dict[str, str] = field(default_factory=dict)
     configuration: Dict[str, Any] = field(default_factory=dict)
-    
+
     # Deployment metadata
     created_by: Optional[str] = None
     created_by_name: Optional[str] = None
     last_modified_by: Optional[str] = None
     description: Optional[str] = None
     tags: List[str] = field(default_factory=list)
-    
+
     # Statistics and monitoring
     total_executions: int = 0
     successful_executions: int = 0
     failed_executions: int = 0
     average_execution_time: Optional[float] = None
     last_execution_status: Optional[ExecutionStatus] = None
-    
+
     # Notification settings
     notify_on_success: bool = False
     notify_on_failure: bool = True
@@ -2681,26 +2682,26 @@ class ScriptLibrary(BaseModel):
     owner_id: Optional[str] = None
     owner_name: Optional[str] = None
     is_public: bool = False
-    
+
     # Organization and metadata
     tags: List[str] = field(default_factory=list)
     category: Optional[str] = None
-    
+
     # Statistics
     script_count: int = 0
     template_count: int = 0
     subscriber_count: int = 0
     usage_count: int = 0
-    
+
     # Access control
     shared_with_users: List[str] = field(default_factory=list)
     shared_with_teams: List[str] = field(default_factory=list)
     permissions: Dict[str, Any] = field(default_factory=dict)
-    
+
     # Content organization
     featured_scripts: List[str] = field(default_factory=list)
     recent_scripts: List[str] = field(default_factory=list)
-    
+
     # Metadata
     last_updated_by: Optional[str] = None
     version: str = "1.0.0"

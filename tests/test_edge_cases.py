@@ -1,3 +1,7 @@
+# Copyright (c) 2025 Aaron Sachs
+# Licensed under the MIT License.
+# See LICENSE file in the project root for full license information.
+
 """Edge case and error scenario tests for py-superops client library.
 
 These tests verify the library's behavior in unusual or error conditions,

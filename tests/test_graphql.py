@@ -1,3 +1,7 @@
+# Copyright (c) 2025 Aaron Sachs
+# Licensed under the MIT License.
+# See LICENSE file in the project root for full license information.
+
 """Tests for GraphQL utilities.
 
 This module tests the GraphQL query builders, fragments, types,

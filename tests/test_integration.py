@@ -1,3 +1,7 @@
+# Copyright (c) 2025 Aaron Sachs
+# Licensed under the MIT License.
+# See LICENSE file in the project root for full license information.
+
 """Integration tests for py-superops client library.
 
 These tests verify end-to-end workflows and integration between components.

@@ -1,6 +1,7 @@
-# # Copyright (c) 2024 SuperOps Team
-# # Licensed under the MIT License.
-# # See LICENSE file in the project root for full license information.
+# Copyright (c) 2025 Aaron Sachs
+# Licensed under the MIT License.
+# See LICENSE file in the project root for full license information.
+
 
 """Reusable GraphQL fragments for common fields in SuperOps API.
 

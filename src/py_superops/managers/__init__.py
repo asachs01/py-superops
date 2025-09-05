@@ -1,6 +1,7 @@
-# # Copyright (c) 2024 SuperOps Team
-# # Licensed under the MIT License.
-# # See LICENSE file in the project root for full license information.
+# Copyright (c) 2025 Aaron Sachs
+# Licensed under the MIT License.
+# See LICENSE file in the project root for full license information.
+
 
 """Resource managers for SuperOps API operations.
 
@@ -61,7 +62,6 @@ from .attachments import AttachmentsManager
 from .automation_manager import AutomationManager
 from .base import ResourceManager
 from .clients import ClientManager
-from .monitoring_manager import MonitoringManager
 from .comments import CommentsManager
 from .contacts import ContactManager
 from .contracts import ContractsManager
@@ -70,6 +70,7 @@ from .knowledge_base import (
     KnowledgeBaseCollectionManager,
     KnowledgeBaseManager,
 )
+from .monitoring_manager import MonitoringManager
 from .projects import ProjectsManager
 from .scripts_manager import ScriptsManager
 from .sites import SiteManager

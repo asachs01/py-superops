@@ -1,17 +1,14 @@
-# # Copyright (c) 2024 SuperOps Team
-# # Licensed under the MIT License.
-# # See LICENSE file in the project root for full license information.
-
-# Copyright (c) 2024 SuperOps Team
+# Copyright (c) 2025 Aaron Sachs
 # Licensed under the MIT License.
 # See LICENSE file in the project root for full license information.
+
 
 """Monitoring manager for SuperOps API operations."""
 
 from __future__ import annotations
 
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from ..exceptions import SuperOpsAPIError, SuperOpsValidationError
 from ..graphql.types import (
@@ -56,11 +53,14 @@ class MonitoringManager(ResourceManager[MonitoringAgent]):
         # For now, we'll need to create a client from config or get it another way
         # This is a pattern change the user requested
         from ..client import SuperOpsClient
+
         client = SuperOpsClient(config)
         super().__init__(client, MonitoringAgent, "monitoringAgent")
 
     # Agent Management (using base ResourceManager methods)
-    async def get_agent(self, agent_id: str, detail_level: str = "full") -> Optional[MonitoringAgent]:
+    async def get_agent(
+        self, agent_id: str, detail_level: str = "full"
+    ) -> Optional[MonitoringAgent]:
         """Get a monitoring agent by ID.
 
         Args:
@@ -148,7 +148,7 @@ class MonitoringManager(ResourceManager[MonitoringAgent]):
             "config": config,
             "tags": tags,
         }
-        
+
         return await self.create(data, detail_level=detail_level)
 
     async def update_agent(
@@ -186,7 +186,7 @@ class MonitoringManager(ResourceManager[MonitoringAgent]):
             data["config"] = config
         if tags is not None:
             data["tags"] = tags
-        
+
         return await self.update(agent_id, data, detail_level=detail_level)
 
     async def delete_agent(self, agent_id: str) -> bool:
@@ -1277,7 +1277,7 @@ class MonitoringManager(ResourceManager[MonitoringAgent]):
     def _build_get_query(self, **kwargs) -> str:
         """Build GraphQL query for getting a single monitoring agent."""
         detail_level = kwargs.get("detail_level", "full")
-        
+
         base_fields = [
             "id",
             "name",
@@ -1294,18 +1294,22 @@ class MonitoringManager(ResourceManager[MonitoringAgent]):
         ]
 
         if detail_level == "full":
-            base_fields.extend([
-                "installedAt",
-                "uninstalledAt",
-                "isActive",
-                "metrics",
-                "checks {id name status}",
-            ])
+            base_fields.extend(
+                [
+                    "installedAt",
+                    "uninstalledAt",
+                    "isActive",
+                    "metrics",
+                    "checks {id name status}",
+                ]
+            )
         elif detail_level == "core":
-            base_fields.extend([
-                "isActive",
-                "lastCheckIn",
-            ])
+            base_fields.extend(
+                [
+                    "isActive",
+                    "lastCheckIn",
+                ]
+            )
 
         fields_str = "\n        ".join(base_fields)
 
@@ -1336,18 +1340,22 @@ class MonitoringManager(ResourceManager[MonitoringAgent]):
         ]
 
         if detail_level == "full":
-            base_fields.extend([
-                "installedAt",
-                "uninstalledAt",
-                "isActive",
-                "config",
-                "metrics",
-            ])
+            base_fields.extend(
+                [
+                    "installedAt",
+                    "uninstalledAt",
+                    "isActive",
+                    "config",
+                    "metrics",
+                ]
+            )
         elif detail_level == "core":
-            base_fields.extend([
-                "isActive",
-                "lastCheckIn",
-            ])
+            base_fields.extend(
+                [
+                    "isActive",
+                    "lastCheckIn",
+                ]
+            )
 
         fields_str = "\n            ".join(base_fields)
 
@@ -1399,11 +1407,13 @@ class MonitoringManager(ResourceManager[MonitoringAgent]):
         ]
 
         if detail_level == "full":
-            fields.extend([
-                "installedAt",
-                "isActive",
-                "lastSeen",
-            ])
+            fields.extend(
+                [
+                    "installedAt",
+                    "isActive",
+                    "lastSeen",
+                ]
+            )
 
         fields_str = "\n            ".join(fields)
 
@@ -1434,11 +1444,13 @@ class MonitoringManager(ResourceManager[MonitoringAgent]):
         ]
 
         if detail_level == "full":
-            fields.extend([
-                "installedAt",
-                "isActive",
-                "lastSeen",
-            ])
+            fields.extend(
+                [
+                    "installedAt",
+                    "isActive",
+                    "lastSeen",
+                ]
+            )
 
         fields_str = "\n            ".join(fields)
 
@@ -1480,16 +1492,20 @@ class MonitoringManager(ResourceManager[MonitoringAgent]):
         ]
 
         if detail_level == "full":
-            fields.extend([
-                "installedAt",
-                "isActive",
-                "config",
-            ])
+            fields.extend(
+                [
+                    "installedAt",
+                    "isActive",
+                    "config",
+                ]
+            )
         elif detail_level == "core":
-            fields.extend([
-                "isActive",
-                "lastCheckIn",
-            ])
+            fields.extend(
+                [
+                    "isActive",
+                    "lastCheckIn",
+                ]
+            )
 
         fields_str = "\n            ".join(fields)
 
@@ -1521,20 +1537,21 @@ class MonitoringManager(ResourceManager[MonitoringAgent]):
     def _validate_create_data(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Validate data for monitoring agent creation."""
         validated = data.copy()
-        
+
         # Required fields
         if not validated.get("name"):
             raise SuperOpsValidationError("Agent name is required")
-        
+
         # Validate IP address format if provided
         ip_address = validated.get("ip_address")
         if ip_address:
             import ipaddress
+
             try:
                 ipaddress.ip_address(ip_address)
             except ValueError:
                 raise SuperOpsValidationError(f"Invalid IP address format: {ip_address}")
-        
+
         # Validate tags format if provided
         tags = validated.get("tags")
         if tags is not None:
@@ -1543,22 +1560,23 @@ class MonitoringManager(ResourceManager[MonitoringAgent]):
             for tag in tags:
                 if not isinstance(tag, str):
                     raise SuperOpsValidationError("All tags must be strings")
-        
+
         return validated
 
     def _validate_update_data(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Validate data for monitoring agent updates."""
         validated = data.copy()
-        
+
         # Validate IP address format if provided
         ip_address = validated.get("ip_address")
         if ip_address:
             import ipaddress
+
             try:
                 ipaddress.ip_address(ip_address)
             except ValueError:
                 raise SuperOpsValidationError(f"Invalid IP address format: {ip_address}")
-        
+
         # Validate tags format if provided
         tags = validated.get("tags")
         if tags is not None:
@@ -1567,5 +1585,5 @@ class MonitoringManager(ResourceManager[MonitoringAgent]):
             for tag in tags:
                 if not isinstance(tag, str):
                     raise SuperOpsValidationError("All tags must be strings")
-        
+
         return validated
