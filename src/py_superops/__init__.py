@@ -1,3 +1,7 @@
+# # Copyright (c) {{ year }} {{ author }}
+# # Licensed under the MIT License.
+# # See LICENSE file in the project root for full license information.
+
 # Copyright (c) 2025 Aaron Sachs
 # Licensed under the MIT License.
 # See LICENSE file in the project root for full license information.
@@ -74,7 +78,7 @@ Key Features:
 
 from typing import Any, Optional
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 __author__ = "SuperOps Team"
 __email__ = "support@superops.com"
 __license__ = "MIT"
